@@ -1,1 +1,7 @@
+# Rust Compilation dir
 /target
+
+# VSCode Workspaces
+*.code-workspace
+
+
