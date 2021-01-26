@@ -1,5 +1,5 @@
 [package]
-name = "COMP4060-Compiler"
+name = "comp4060-compiler"
 version = "0.1.0"
 authors = ["Carlton Perkins <carltonrp52@gmail.com>"]
 edition = "2018"
