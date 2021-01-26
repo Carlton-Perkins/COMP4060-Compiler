@@ -1,4 +1,4 @@
-Define data types for R0 program ASTs.
+x 2021-01-26 Define data types for R0 program ASTs.
 Write a pretty-printer for R0 programs.
 Build a test suite of a dozen R0 programs.
 Write an interpreter for R0 programs.
