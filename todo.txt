@@ -6,7 +6,7 @@ x 2021-01-26 Write a function that generates an R0 program that computes 2^N for
 x 2021-01-27 Write a function that generates a random R0 program of depth N.
 x 2021-01-27 Extend your test suite to generate a large number of random programs.
 x 2021-01-27 Write some optimizer tests.
-Write an optimizer for R0.
+x 2021-01-27 Write an optimizer for R0.
 Extend your test suite to use your optimizer.
 Extend your data types from R0 to R1.
 Extend your pretty printer from R0 to R1.

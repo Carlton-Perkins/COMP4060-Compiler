@@ -66,8 +66,44 @@ fn opt(e: Expr) -> Expr {
     match e {
         Num(_) => e,
         Read => e,
-        Negate(_) => e,
-        Add(_, _) => e,
+        Negate(ex) => {
+            let o = opt(*ex);
+            match o {
+                Num(n) => { Num(-1 * n) }
+                Read => { Negate(Box::new(o)) }
+                Negate(n) => { *n }
+                Add(_, _) => { Negate(Box::new(o)) }
+            }
+        },
+        Add(le, re) => {
+            let o = (opt(*le), opt(*re));
+
+            match o.clone() {
+                (Num(l), Num(r)) => { Num(l + r) }
+                (Num(l), Add(r1, r2)) => {
+                    match *r1 {
+                        Num(r) => { Add(Box::new(Num(l + r)), r2)},
+                        _ => { Add(Box::new(o.0), Box::new(o.1)) }
+                    }
+                }
+                (Add(l1, l2), Num(r)) => {
+                    match *l1 {
+                        Num(l) => { Add(Box::new(Num(l + r)), l2)},
+                        _ => { Add(Box::new(o.0), Box::new(o.1)) }
+                    }
+                }
+                (Add(l1, l2), Add(r1, r2)) => {
+                    match (*l1, *r1) {
+                        (Num(l), Num(r)) => {
+                            Add(Box::new(Num(l + r)), Box::new(Add(l2, r2)))
+                        }
+                        _ => {Add(Box::new(o.0), Box::new(o.1))}
+                    }
+                }
+
+                _ => { Add(Box::new(o.0), Box::new(o.1)) }
+            }
+        },
     }
 }
 
@@ -140,10 +176,12 @@ mod tests {
 
     #[test]
     fn test_randp() {
-        for _ in 0..1000 {
-            let e = randp(random::<usize>() % 20);
-            let prog = (e.clone(), &mut Env::new());
-            println!("{:?} -> {}", e, interp(prog))
+        for depth in 0..20 {
+            for _ in 0..1000 {
+                let e = randp(depth);
+                let prog = (e.clone(), &mut Env::new());
+                println!("{:?} -> {}", e, interp(prog));
+            }
         }
     }
 
