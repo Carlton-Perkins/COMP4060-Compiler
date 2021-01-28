@@ -1,11 +1,15 @@
 use rand::random;
 
+
+type Var = usize;
 #[derive(Debug, PartialEq, Clone)]
 enum Expr {
     Num(i64),
     Read,
     Negate(Box<Expr>),
     Add(Box<Expr>, Box<Expr>),
+    Let(Var, Box<Expr>),
+    Var(Var),
 }
 use i64 as OType;
 use Expr::*;
@@ -32,6 +36,8 @@ fn interp((expr, mut env): Program) -> OType {
         }
         Negate(ex) => -1 * interp((*ex, &mut env)),
         Add(lh, rh) => interp((*lh, &mut env)) + interp((*rh, &mut env)),
+        Let(_,_) => unimplemented!(),
+        Var(_) => unimplemented!(),
     }
 }
 
@@ -73,6 +79,7 @@ fn opt(e: Expr) -> Expr {
                 Read => Negate(Box::new(o)),
                 Negate(n) => *n,
                 Add(_, _) => Negate(Box::new(o)),
+                n => Negate(Box::new(n))
             }
         }
         Add(le, re) => {
@@ -96,6 +103,8 @@ fn opt(e: Expr) -> Expr {
                 _ => Add(Box::new(o.0), Box::new(o.1)),
             }
         }
+        Let(_, _) => { unimplemented!() }
+        Expr::Var(_) => { unimplemented!() }
     }
 }
 
