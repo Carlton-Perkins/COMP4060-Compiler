@@ -51,14 +51,23 @@ fn randp(depth: usize) -> Expr {
                 // Generate much smaller numbers for now to not overflow
                 Num(random::<i8>() as i64)
             }
-        },
+        }
         n => {
             if random() {
                 Add(Box::new(randp(n - 1)), Box::new(randp(n - 1)))
             } else {
-                Negate(Box::new(randp(n -1)))
+                Negate(Box::new(randp(n - 1)))
             }
         }
+    }
+}
+
+fn opt(e: Expr) -> Expr {
+    match e {
+        Num(_) => e,
+        Read => e,
+        Negate(_) => e,
+        Add(_, _) => e,
     }
 }
 
@@ -82,13 +91,12 @@ fn main() {
         let prog = (e.clone(), &mut Env::new());
         println!("{:?} -> {}", e, interp(prog))
     }
-    
 }
-
-
 
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use super::*;
 
     fn a_interp(expr: Expr, expect: OType) {
@@ -136,6 +144,27 @@ mod tests {
             let e = randp(random::<usize>() % 20);
             let prog = (e.clone(), &mut Env::new());
             println!("{:?} -> {}", e, interp(prog))
+        }
+    }
+
+    #[test]
+    fn test_opt() {
+        let test_expr = vec![
+            (Num(5), Num(5), 5),
+            (Negate(Box::new(Num(5))), Num(-5), -5),
+            (Negate(Box::new(Read)), Negate(Box::new(Read)), 0),
+            (Add(Box::new(Num(3)), Box::new(Num(2))), Num(5), 5),
+            (Add(Box::new(Num(3)), Box::new(Read)), Add(Box::new(Num(3)), Box::new(Read)), 3),
+        ];
+
+        for (e, expect_opt, expect_res) in test_expr {
+            let e_res = interp((e.clone(), &mut Env::new()));
+            let opt = opt(e.clone());
+            let opt_res = interp((opt.clone(), &mut Env::new()));
+
+            assert_eq!(opt, expect_opt);
+            assert_eq!(e_res, expect_res);
+            assert_eq!(e_res, opt_res);
         }
     }
 }
