@@ -69,41 +69,33 @@ fn opt(e: Expr) -> Expr {
         Negate(ex) => {
             let o = opt(*ex);
             match o {
-                Num(n) => { Num(-1 * n) }
-                Read => { Negate(Box::new(o)) }
-                Negate(n) => { *n }
-                Add(_, _) => { Negate(Box::new(o)) }
+                Num(n) => Num(-1 * n),
+                Read => Negate(Box::new(o)),
+                Negate(n) => *n,
+                Add(_, _) => Negate(Box::new(o)),
             }
-        },
+        }
         Add(le, re) => {
             let o = (opt(*le), opt(*re));
 
             match o.clone() {
-                (Num(l), Num(r)) => { Num(l + r) }
-                (Num(l), Add(r1, r2)) => {
-                    match *r1 {
-                        Num(r) => { Add(Box::new(Num(l + r)), r2)},
-                        _ => { Add(Box::new(o.0), Box::new(o.1)) }
-                    }
-                }
-                (Add(l1, l2), Num(r)) => {
-                    match *l1 {
-                        Num(l) => { Add(Box::new(Num(l + r)), l2)},
-                        _ => { Add(Box::new(o.0), Box::new(o.1)) }
-                    }
-                }
-                (Add(l1, l2), Add(r1, r2)) => {
-                    match (*l1, *r1) {
-                        (Num(l), Num(r)) => {
-                            Add(Box::new(Num(l + r)), Box::new(Add(l2, r2)))
-                        }
-                        _ => {Add(Box::new(o.0), Box::new(o.1))}
-                    }
-                }
+                (Num(l), Num(r)) => Num(l + r),
+                (Num(l), Add(r1, r2)) => match *r1 {
+                    Num(r) => Add(Box::new(Num(l + r)), r2),
+                    _ => Add(Box::new(o.0), Box::new(o.1)),
+                },
+                (Add(l1, l2), Num(r)) => match *l1 {
+                    Num(l) => Add(Box::new(Num(l + r)), l2),
+                    _ => Add(Box::new(o.0), Box::new(o.1)),
+                },
+                (Add(l1, l2), Add(r1, r2)) => match (*l1, *r1) {
+                    (Num(l), Num(r)) => Add(Box::new(Num(l + r)), Box::new(Add(l2, r2))),
+                    _ => Add(Box::new(o.0), Box::new(o.1)),
+                },
 
-                _ => { Add(Box::new(o.0), Box::new(o.1)) }
+                _ => Add(Box::new(o.0), Box::new(o.1)),
             }
-        },
+        }
     }
 }
 
@@ -192,7 +184,11 @@ mod tests {
             (Negate(Box::new(Num(5))), Num(-5), -5),
             (Negate(Box::new(Read)), Negate(Box::new(Read)), 0),
             (Add(Box::new(Num(3)), Box::new(Num(2))), Num(5), 5),
-            (Add(Box::new(Num(3)), Box::new(Read)), Add(Box::new(Num(3)), Box::new(Read)), 3),
+            (
+                Add(Box::new(Num(3)), Box::new(Read)),
+                Add(Box::new(Num(3)), Box::new(Read)),
+                3,
+            ),
         ];
 
         for (e, expect_opt, expect_res) in test_expr {
@@ -203,6 +199,20 @@ mod tests {
             assert_eq!(opt, expect_opt);
             assert_eq!(e_res, expect_res);
             assert_eq!(e_res, opt_res);
+        }
+    }
+
+    #[test]
+    fn test_randp_opt() {
+        for depth in 0..20 {
+            for _ in 0..100 {
+                let e = randp(depth);
+                let e_res = interp((e.clone(), &mut Env::new()));
+                let opt = opt(e.clone());
+                let opt_res = interp((opt.clone(), &mut Env::new()));
+
+                assert_eq!(e_res, opt_res, "'{:?}' does not equal '{:?}'", e, opt);
+            }
         }
     }
 }
