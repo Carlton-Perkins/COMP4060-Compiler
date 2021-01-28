@@ -80,7 +80,7 @@ fn main() {
     for _ in 0..10 {
         let e = randp(5);
         let prog = (e.clone(), &mut Env::new());
-        println!("{:?} -> {}", e ,interp(prog))
+        println!("{:?} -> {}", e, interp(prog))
     }
     
 }
@@ -128,5 +128,14 @@ mod tests {
         a_interp(two_n(3), 8);
         a_interp(two_n(4), 16);
         a_interp(two_n(5), 32);
+    }
+
+    #[test]
+    fn test_randp() {
+        for _ in 0..1000 {
+            let e = randp(random::<usize>() % 20);
+            let prog = (e.clone(), &mut Env::new());
+            println!("{:?} -> {}", e, interp(prog))
+        }
     }
 }

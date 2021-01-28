@@ -4,7 +4,7 @@ x 2021-01-26 Build a test suite of a dozen R0 programs.
 x 2021-01-26 Write an interpreter for R0 programs.
 x 2021-01-26 Write a function that generates an R0 program that computes 2^N for a given N.
 x 2021-01-27 Write a function that generates a random R0 program of depth N.
-Extend your test suite to generate a large number of random programs.
+x 2021-01-27 Extend your test suite to generate a large number of random programs.
 Write some optimizer tests.
 Write an optimizer for R0.
 Extend your test suite to use your optimizer.
