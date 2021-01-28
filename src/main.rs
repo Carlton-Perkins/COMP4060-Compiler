@@ -1,11 +1,13 @@
+use rand::random;
+
 #[derive(Debug, PartialEq, Clone)]
 enum Expr {
-    Num(isize),
+    Num(i64),
     Read,
     Negate(Box<Expr>),
     Add(Box<Expr>, Box<Expr>),
 }
-use isize as OType;
+use i64 as OType;
 use Expr::*;
 
 struct Env {
@@ -24,7 +26,7 @@ fn interp((expr, mut env): Program) -> OType {
     match expr {
         Num(n) => n,
         Read => {
-            let res = env.read_count;
+            let res = env.read_count as i64;
             env.read_count += 1;
             res
         }
@@ -37,6 +39,26 @@ fn two_n(n: usize) -> Expr {
     match n {
         0 => Num(1),
         n => Add(Box::new(two_n(n - 1)), Box::new(two_n(n - 1))),
+    }
+}
+
+fn randp(depth: usize) -> Expr {
+    match depth {
+        0 => {
+            if random() {
+                Read
+            } else {
+                // Generate much smaller numbers for now to not overflow
+                Num(random::<i8>() as i64)
+            }
+        },
+        n => {
+            if random() {
+                Add(Box::new(randp(n - 1)), Box::new(randp(n - 1)))
+            } else {
+                Negate(Box::new(randp(n -1)))
+            }
+        }
     }
 }
 
@@ -54,7 +76,13 @@ fn main() {
     //         &mut Env::new()
     //     ))
     // );
-    println!("{:?}", two_n(2));
+    // println!("{:?}", two_n(2));
+    for _ in 0..10 {
+        let e = randp(5);
+        let prog = (e.clone(), &mut Env::new());
+        println!("{:?} -> {}", e ,interp(prog))
+    }
+    
 }
 
 
