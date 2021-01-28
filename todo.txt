@@ -9,7 +9,7 @@ x 2021-01-27 Write some optimizer tests.
 x 2021-01-27 Write an optimizer for R0.
 x 2021-01-27 Extend your test suite to use your optimizer.
 x 2021-01-28 Extend your data types from R0 to R1.
-Extend your pretty printer from R0 to R1.
+x 2021-01-28 Extend your pretty printer from R0 to R1.
 Write a dozen test R1 programs.
 Extend your interpreter from R0 to R1.
 Extend your random generation function from R0 to R1.
