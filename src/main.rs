@@ -1,6 +1,5 @@
 use rand::random;
 
-
 type Var = usize;
 #[derive(Debug, PartialEq, Clone)]
 enum Expr {
@@ -8,7 +7,7 @@ enum Expr {
     Read,
     Negate(Box<Expr>),
     Add(Box<Expr>, Box<Expr>),
-    Let(Var, Box<Expr>),
+    Let(Var, Box<Expr>, Box<Expr>),
     Var(Var),
 }
 use i64 as OType;
@@ -36,7 +35,7 @@ fn interp((expr, mut env): Program) -> OType {
         }
         Negate(ex) => -1 * interp((*ex, &mut env)),
         Add(lh, rh) => interp((*lh, &mut env)) + interp((*rh, &mut env)),
-        Let(_,_) => unimplemented!(),
+        Let(_, _, _) => unimplemented!(),
         Var(_) => unimplemented!(),
     }
 }
@@ -79,7 +78,7 @@ fn opt(e: Expr) -> Expr {
                 Read => Negate(Box::new(o)),
                 Negate(n) => *n,
                 Add(_, _) => Negate(Box::new(o)),
-                n => Negate(Box::new(n))
+                n => Negate(Box::new(n)),
             }
         }
         Add(le, re) => {
@@ -103,8 +102,12 @@ fn opt(e: Expr) -> Expr {
                 _ => Add(Box::new(o.0), Box::new(o.1)),
             }
         }
-        Let(_, _) => { unimplemented!() }
-        Expr::Var(_) => { unimplemented!() }
+        Let(_, _, _) => {
+            unimplemented!()
+        }
+        Expr::Var(_) => {
+            unimplemented!()
+        }
     }
 }
 
@@ -142,27 +145,78 @@ mod tests {
         assert_eq!(res, expect);
     }
 
+    fn a_interp_all(vec: Vec<(Expr, OType)>) {
+        for (e, ex) in vec {
+            a_interp(e, ex)
+        }
+    }
+
     #[test]
-    fn test_basic() {
-        a_interp(Num(5), 5);
-        a_interp(Num(-5), -5);
-        a_interp(Add(Box::new(Num(5)), Box::new(Num(6))), 11);
-        a_interp(Add(Box::new(Read), Box::new(Read)), 1);
-        a_interp(Read, 0);
-        a_interp(Negate(Box::new(Num(5))), -5);
-        a_interp(
-            Add(Box::new(Num(5)), Box::new(Negate(Box::new(Num(6))))),
-            -1,
-        );
-        a_interp(Add(Box::new(Read), Box::new(Negate(Box::new(Num(6))))), -6);
-        a_interp(
-            Negate(Box::new(Negate(Box::new(Negate(Box::new(Num(6))))))),
-            -6,
-        );
-        a_interp(
-            Negate(Box::new(Negate(Box::new(Negate(Box::new(Num(0))))))),
-            0,
-        );
+    fn test_r0() {
+        let tests = vec![
+            (Num(5), 5),
+            (Num(-5), -5),
+            (Add(Box::new(Num(5)), Box::new(Num(6))), 11),
+            (Add(Box::new(Read), Box::new(Read)), 1),
+            (Read, 0),
+            (Negate(Box::new(Num(5))), -5),
+            (
+                Add(Box::new(Num(5)), Box::new(Negate(Box::new(Num(6))))),
+                -1,
+            ),
+            (Add(Box::new(Read), Box::new(Negate(Box::new(Num(6))))), -6),
+            (
+                Negate(Box::new(Negate(Box::new(Negate(Box::new(Num(6))))))),
+                -6,
+            ),
+            (
+                Negate(Box::new(Negate(Box::new(Negate(Box::new(Num(0))))))),
+                0,
+            ),
+        ];
+
+        a_interp_all(tests);
+    }
+
+    #[test]
+    fn test_r1() {
+        let tests = vec![
+            (Let(0, Box::new(Num(0)), Box::new(Read)), 0),
+            (
+                Let(
+                    0,
+                    Box::new(Num(0)),
+                    Box::new(Let(0, Box::new(Num(1)), Box::new(Var(0)))),
+                ),
+                1,
+            ),
+            (
+                Let(
+                    0,
+                    Box::new(Num(4)),
+                    Box::new(Let(
+                        1,
+                        Box::new(Num(5)),
+                        Box::new(Add(Box::new(Var(0)), Box::new(Var(1)))),
+                    )),
+                ),
+                9,
+            ),
+            (
+                Let(
+                    0,
+                    Box::new(Read),
+                    Box::new(Let(
+                        1,
+                        Box::new(Read),
+                        Box::new(Add(Box::new(Var(0)), Box::new(Var(1)))),
+                    )),
+                ),
+                1,
+            ),
+        ];
+
+        a_interp_all(tests);
     }
 
     #[test]
@@ -176,6 +230,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Slow"]
     fn test_randp() {
         for depth in 0..20 {
             for _ in 0..1000 {
@@ -212,6 +267,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Slow"]
     fn test_randp_opt() {
         for depth in 0..20 {
             for _ in 0..100 {
