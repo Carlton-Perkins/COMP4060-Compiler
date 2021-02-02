@@ -1,3 +1,6 @@
+
+use std::collections::HashMap;
+
 use rand::random;
 
 type Var = usize;
@@ -15,11 +18,15 @@ use Expr::*;
 
 struct Env {
     read_count: isize,
+    vars: HashMap<Var, OType>
 }
 
 impl Env {
     fn new() -> Self {
-        Env { read_count: 0 }
+        Env { 
+            read_count: 0,
+            vars: HashMap::new()
+        }
     }
 }
 
@@ -35,8 +42,14 @@ fn interp((expr, mut env): Program) -> OType {
         }
         Negate(ex) => -1 * interp((*ex, &mut env)),
         Add(lh, rh) => interp((*lh, &mut env)) + interp((*rh, &mut env)),
-        Let(_, _, _) => unimplemented!(),
-        Var(_) => unimplemented!(),
+        Let(v, ve, be) => {
+            let value = interp((*ve,  env));
+            env.vars.insert(v, value);
+            interp((*be, env))
+        },
+        Var(n) => {
+            env.vars[&n]
+        },
     }
 }
 
