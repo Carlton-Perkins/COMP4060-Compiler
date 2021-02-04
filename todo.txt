@@ -12,7 +12,7 @@ x 2021-01-28 Extend your data types from R0 to R1.
 x 2021-01-28 Extend your pretty printer from R0 to R1.
 x 2021-02-02 Write a dozen test R1 programs.
 x 2021-02-02 Extend your interpreter from R0 to R1.
-Extend your random generation function from R0 to R1.
+x 2021-02-04 Extend your random generation function from R0 to R1.
 Write some R1-specific optimizer tests.
 Extend your optimizer from R0 to R1.
 Define data types for X0 program ASTs.

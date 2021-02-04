@@ -1,7 +1,6 @@
-
 use std::collections::HashMap;
 
-use rand::random;
+use rand::{prelude::SliceRandom, random, seq::IteratorRandom, thread_rng};
 
 type Var = usize;
 #[derive(Debug, PartialEq, Clone)]
@@ -18,14 +17,14 @@ use Expr::*;
 
 struct Env {
     read_count: isize,
-    vars: HashMap<Var, OType>
+    vars: HashMap<Var, OType>,
 }
 
 impl Env {
     fn new() -> Self {
-        Env { 
+        Env {
             read_count: 0,
-            vars: HashMap::new()
+            vars: HashMap::new(),
         }
     }
 }
@@ -43,13 +42,11 @@ fn interp((expr, mut env): Program) -> OType {
         Negate(ex) => -1 * interp((*ex, &mut env)),
         Add(lh, rh) => interp((*lh, &mut env)) + interp((*rh, &mut env)),
         Let(v, ve, be) => {
-            let value = interp((*ve,  env));
+            let value = interp((*ve, env));
             env.vars.insert(v, value);
             interp((*be, env))
-        },
-        Var(n) => {
-            env.vars[&n]
-        },
+        }
+        Var(n) => env.vars[&n],
     }
 }
 
@@ -60,22 +57,52 @@ fn two_n(n: usize) -> Expr {
     }
 }
 
-fn randp(depth: usize) -> Expr {
+#[derive(Clone)]
+struct RandEnv {
+    vars: Vec<Var>,
+}
+
+impl RandEnv {
+    fn new() -> Self {
+        RandEnv {vars: Vec::new()}
+    }
+}
+
+fn randp(depth: usize, env: &RandEnv) -> Expr {
+    type DoType = Box<dyn Fn(usize, &RandEnv) -> Expr>;
+    let do_read = |_: usize, _: &RandEnv| -> Expr { Read };
+    let do_num = |_: usize, _: &RandEnv| -> Expr { Num(random::<i8>() as i64) };
+    let do_var = |_: usize, env: &RandEnv| -> Expr {
+        let mut rng = thread_rng();
+        Var(*(env.vars.choose(&mut rng).unwrap()))
+    };
+    let mut do_dzero: Vec<DoType> = vec![Box::new(do_read), Box::new(do_num)];
+    if env.vars.len() > 0 {
+        do_dzero.push(Box::new(do_var))
+    }
+
+    let do_add = |depth: usize, env: &RandEnv| -> Expr {
+        Add(
+            Box::new(randp(depth - 1, env)),
+            Box::new(randp(depth - 1, env)),
+        )
+    };
+    let do_negate = |depth: usize, env: &RandEnv| -> Expr { Negate(Box::new(randp(depth - 1, env))) };
+    let do_let = |depth: usize, env: &RandEnv| -> Expr {
+        let mut new_env = env.clone();
+        let new_var = new_env.vars.len();
+        new_env.vars.push(new_var);
+        Let(new_var,Box::new(randp(depth-1, env)), Box::new(randp(depth-1, &new_env)))
+    };
+    let do_dn: Vec<DoType> = vec![Box::new(do_add), Box::new(do_negate), Box::new(do_let)];
+
+    let mut rng = thread_rng();
     match depth {
         0 => {
-            if random() {
-                Read
-            } else {
-                // Generate much smaller numbers for now to not overflow
-                Num(random::<i8>() as i64)
-            }
+            do_dzero.choose(&mut rng).unwrap()(0, env)
         }
         n => {
-            if random() {
-                Add(Box::new(randp(n - 1)), Box::new(randp(n - 1)))
-            } else {
-                Negate(Box::new(randp(n - 1)))
-            }
+            do_dn.choose(&mut rng).unwrap()(n, env)
         }
     }
 }
@@ -140,7 +167,7 @@ fn main() {
     // );
     // println!("{:?}", two_n(2));
     for _ in 0..10 {
-        let e = randp(5);
+        let e = randp(4, &RandEnv::new());
         let prog = (e.clone(), &mut Env::new());
         println!("{:?} -> {}", e, interp(prog))
     }
@@ -245,9 +272,9 @@ mod tests {
     #[test]
     #[ignore = "Slow"]
     fn test_randp() {
-        for depth in 0..20 {
-            for _ in 0..1000 {
-                let e = randp(depth);
+        for depth in 0..10 {
+            for _ in 0..100 {
+                let e = randp(depth, &RandEnv::new());
                 let prog = (e.clone(), &mut Env::new());
                 println!("{:?} -> {}", e, interp(prog));
             }
@@ -284,7 +311,7 @@ mod tests {
     fn test_randp_opt() {
         for depth in 0..20 {
             for _ in 0..100 {
-                let e = randp(depth);
+                let e = randp(depth, &RandEnv::new());
                 let e_res = interp((e.clone(), &mut Env::new()));
                 let opt = opt(e.clone());
                 let opt_res = interp((opt.clone(), &mut Env::new()));
