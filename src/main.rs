@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rand::{prelude::SliceRandom, random, seq::IteratorRandom, thread_rng};
+use rand::{prelude::SliceRandom, random, thread_rng};
 
 type Var = usize;
 #[derive(Debug, PartialEq, Clone)]
@@ -30,6 +30,17 @@ impl Env {
 }
 
 type Program<'a> = (Expr, &'a mut Env);
+
+fn is_pure(e: &Expr) -> bool {
+    match e {
+        Num(_) => true,
+        Read => false,
+        Negate(ex) => is_pure(ex),
+        Add(lh, rh) => is_pure(lh) && is_pure(rh),
+        Let(_, ve, be) => is_pure(ve) && is_pure(be),
+        Var(_) => true,
+    }
+}
 
 fn interp((expr, mut env): Program) -> OType {
     match expr {
@@ -107,13 +118,25 @@ fn randp(depth: usize, env: &RandEnv) -> Expr {
         n => do_dn.choose(&mut rng).unwrap()(n, env),
     }
 }
+#[derive(Clone)]
+struct OptEnv {
+    vars: HashMap<Var, Expr>,
+}
 
-fn opt(e: Expr) -> Expr {
+impl OptEnv {
+    fn new() -> Self {
+        OptEnv {
+            vars: HashMap::new(),
+        }
+    }
+}
+
+fn opt(e: Expr, env: &OptEnv) -> Expr {
     match e {
         Num(_) => e,
         Read => e,
         Negate(ex) => {
-            let o = opt(*ex);
+            let o = opt(*ex, env);
             match o {
                 Num(n) => Num(-1 * n),
                 Read => Negate(Box::new(o)),
@@ -123,7 +146,7 @@ fn opt(e: Expr) -> Expr {
             }
         }
         Add(le, re) => {
-            let o = (opt(*le), opt(*re));
+            let o = (opt(*le, env), opt(*re, env));
 
             match o.clone() {
                 (Num(l), Num(r)) => Num(l + r),
@@ -139,15 +162,28 @@ fn opt(e: Expr) -> Expr {
                     (Num(l), Num(r)) => Add(Box::new(Num(l + r)), Box::new(Add(l2, r2))),
                     _ => Add(Box::new(o.0), Box::new(o.1)),
                 },
-
+                (l, Num(n)) => {Add(Box::new(Num(n)), Box::new(l))}
                 _ => Add(Box::new(o.0), Box::new(o.1)),
             }
         }
-        Let(_, _, _) => {
-            unimplemented!()
-        }
-        Expr::Var(_) => {
-            unimplemented!()
+        Let(id, ve, be) => {
+            let o_ve = opt(*ve, env);
+
+            if is_pure(&o_ve) {
+                let mut new_env = env.clone();
+                new_env.vars.insert(id, o_ve);
+                opt(*be, &new_env)
+            } else {
+                let o_be = opt(*be, env);
+                Let(id, Box::new(o_ve), Box::new(o_be))
+            }
+                
+            }
+        Var(id) => {
+            match env.vars.get(&id) {
+                Some(e) => {e.clone()}
+                None => {Var(id)}
+            }
         }
     }
 }
@@ -181,9 +217,9 @@ mod tests {
     use super::*;
 
     fn a_interp(expr: Expr, expect: OType) {
-        let prog = (expr, &mut Env::new());
+        let prog = (expr.clone(), &mut Env::new());
         let res = interp(prog);
-        assert_eq!(res, expect);
+        assert_eq!(res, expect, "Program {:?} does not eval to {}, but instead {}", expr, expect, res);
     }
 
     fn a_interp_all(vec: Vec<(Expr, OType)>) {
@@ -283,13 +319,14 @@ mod tests {
     }
 
     fn a_opt(e: Expr, expected_opt: Expr, expected_result: i64) {
+        println!("{:?}", e);
         let e_res = interp((e.clone(), &mut Env::new()));
-        let opt = opt(e.clone());
+        let opt = opt(e.clone(), &OptEnv::new());
         let opt_res = interp((opt.clone(), &mut Env::new()));
 
-        assert_eq!(opt, expected_opt);
-        assert_eq!(e_res, expected_result);
-        assert_eq!(e_res, opt_res);
+        assert_eq!(opt, expected_opt, "Optimization for {:?} does not result in the expected optimization {:?}", opt, expected_opt);
+        assert_eq!(e_res, expected_result, "Evaluation for {:?} does not evaluate to {}", e, expected_result);
+        assert_eq!(e_res, opt_res, "Optimization for {:?} -> {} does not evaluate the same as original expression {:?} -> {} ", opt, opt_res, e, e_res);
     }
 
     fn a_opt_all(vec: Vec<(Expr, Expr, i64)>) {
@@ -335,6 +372,23 @@ mod tests {
                 Num(6),
                 6,
             ),
+            (
+                Let(
+                    0,
+                    Box::new(Num(3)),
+                    Box::new(Let(
+                        1,
+                        Box::new(Num(2)),
+                        Box::new(Let(
+                            2,
+                            Box::new(Add(Box::new(Var(0)), Box::new(Var(1)))),
+                            Box::new(Add(Box::new(Read), Box::new(Var(2)))),
+                        )),
+                    )),
+                ),
+                Add(Box::new(Num(5)), Box::new(Read)),
+                5,
+            ),
         ];
 
         a_opt_all(test_expr);
@@ -347,7 +401,7 @@ mod tests {
             for _ in 0..100 {
                 let e = randp(depth, &RandEnv::new());
                 let e_res = interp((e.clone(), &mut Env::new()));
-                let opt = opt(e.clone());
+                let opt = opt(e.clone(), &OptEnv::new());
                 let opt_res = interp((opt.clone(), &mut Env::new()));
 
                 assert_eq!(e_res, opt_res, "'{:?}' does not equal '{:?}'", e, opt);
