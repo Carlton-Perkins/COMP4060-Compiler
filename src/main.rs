@@ -64,7 +64,7 @@ struct RandEnv {
 
 impl RandEnv {
     fn new() -> Self {
-        RandEnv {vars: Vec::new()}
+        RandEnv { vars: Vec::new() }
     }
 }
 
@@ -87,23 +87,24 @@ fn randp(depth: usize, env: &RandEnv) -> Expr {
             Box::new(randp(depth - 1, env)),
         )
     };
-    let do_negate = |depth: usize, env: &RandEnv| -> Expr { Negate(Box::new(randp(depth - 1, env))) };
+    let do_negate =
+        |depth: usize, env: &RandEnv| -> Expr { Negate(Box::new(randp(depth - 1, env))) };
     let do_let = |depth: usize, env: &RandEnv| -> Expr {
         let mut new_env = env.clone();
         let new_var = new_env.vars.len();
         new_env.vars.push(new_var);
-        Let(new_var,Box::new(randp(depth-1, env)), Box::new(randp(depth-1, &new_env)))
+        Let(
+            new_var,
+            Box::new(randp(depth - 1, env)),
+            Box::new(randp(depth - 1, &new_env)),
+        )
     };
     let do_dn: Vec<DoType> = vec![Box::new(do_add), Box::new(do_negate), Box::new(do_let)];
 
     let mut rng = thread_rng();
     match depth {
-        0 => {
-            do_dzero.choose(&mut rng).unwrap()(0, env)
-        }
-        n => {
-            do_dn.choose(&mut rng).unwrap()(n, env)
-        }
+        0 => do_dzero.choose(&mut rng).unwrap()(0, env),
+        n => do_dn.choose(&mut rng).unwrap()(n, env),
     }
 }
 
@@ -281,8 +282,24 @@ mod tests {
         }
     }
 
+    fn a_opt(e: Expr, expected_opt: Expr, expected_result: i64) {
+        let e_res = interp((e.clone(), &mut Env::new()));
+        let opt = opt(e.clone());
+        let opt_res = interp((opt.clone(), &mut Env::new()));
+
+        assert_eq!(opt, expected_opt);
+        assert_eq!(e_res, expected_result);
+        assert_eq!(e_res, opt_res);
+    }
+
+    fn a_opt_all(vec: Vec<(Expr, Expr, i64)>) {
+        for (e, expect_opt, expect_res) in vec {
+            a_opt(e, expect_opt, expect_res)
+        }
+    }
+
     #[test]
-    fn test_opt() {
+    fn test_opt_r0() {
         let test_expr = vec![
             (Num(5), Num(5), 5),
             (Negate(Box::new(Num(5))), Num(-5), -5),
@@ -295,15 +312,32 @@ mod tests {
             ),
         ];
 
-        for (e, expect_opt, expect_res) in test_expr {
-            let e_res = interp((e.clone(), &mut Env::new()));
-            let opt = opt(e.clone());
-            let opt_res = interp((opt.clone(), &mut Env::new()));
+        a_opt_all(test_expr);
+    }
 
-            assert_eq!(opt, expect_opt);
-            assert_eq!(e_res, expect_res);
-            assert_eq!(e_res, opt_res);
-        }
+    #[test]
+    fn test_opt_r1() {
+        let test_expr = vec![
+            (Let(0, Box::new(Num(0)), Box::new(Num(1))), Num(1), 1),
+            (Let(0, Box::new(Num(5)), Box::new(Read)), Read, 0),
+            (Let(0, Box::new(Num(5)), Box::new(Var(0))), Num(5), 5),
+            (
+                Let(0, Box::new(Read), Box::new(Var(0))),
+                Let(0, Box::new(Read), Box::new(Var(0))),
+                0,
+            ),
+            (
+                Let(
+                    0,
+                    Box::new(Num(5)),
+                    Box::new(Let(0, Box::new(Num(6)), Box::new(Var(0)))),
+                ),
+                Num(6),
+                6,
+            ),
+        ];
+
+        a_opt_all(test_expr);
     }
 
     #[test]
