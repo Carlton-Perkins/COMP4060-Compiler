@@ -40,7 +40,6 @@ impl Expr {
             Var(_) => true,
         }
     }
-    
 }
 
 pub fn interp((expr, mut env): Program) -> OType {
@@ -150,14 +149,13 @@ mod test_rprog {
         a_interp_all(tests);
     }
 
-
     fn two_n(n: usize) -> Expr {
         match n {
             0 => Num(1),
             n => Add(Box::new(two_n(n - 1)), Box::new(two_n(n - 1))),
         }
     }
-    
+
     #[test]
     fn test_two_n() {
         a_interp(two_n(0), 1);
@@ -167,5 +165,4 @@ mod test_rprog {
         a_interp(two_n(4), 16);
         a_interp(two_n(5), 32);
     }
-
 }

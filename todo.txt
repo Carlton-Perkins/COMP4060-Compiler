@@ -15,7 +15,7 @@ x 2021-02-02 Extend your interpreter from R0 to R1.
 x 2021-02-04 Extend your random generation function from R0 to R1.
 x 2021-02-04 Write some R1-specific optimizer tests.
 x 2021-02-04 Extend your optimizer from R0 to R1.
-Define data types for X0 program ASTs.
+x 2021-02-07 Define data types for X0 program ASTs.
 Write an emitter for X0 programs.
 Build a test suite of a dozen X0 programs.
 Write an interpreter for X0 programs.

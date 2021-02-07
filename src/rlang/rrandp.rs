@@ -1,7 +1,6 @@
-
-use rand::prelude::*;
-use crate::rlang::{Expr, Var};
 use crate::rlang::Expr::*;
+use crate::rlang::{Expr, Var};
+use rand::prelude::*;
 
 #[derive(Clone)]
 pub struct RandEnv {

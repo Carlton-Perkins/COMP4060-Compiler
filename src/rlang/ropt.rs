@@ -1,7 +1,6 @@
-
-use std::collections::HashMap;
-use crate::rlang::{Expr, Var};
 use crate::rlang::Expr::*;
+use crate::rlang::{Expr, Var};
+use std::collections::HashMap;
 
 #[derive(Clone)]
 
@@ -74,8 +73,8 @@ pub fn opt(e: Expr, env: &OptEnv) -> Expr {
 #[cfg(test)]
 mod test_ropt {
     use super::*;
-    use crate::rlang::{interp, Env};
     use crate::rlang::rrandp::{randp, RandEnv};
+    use crate::rlang::{interp, Env};
 
     fn a_opt(e: Expr, expected_opt: Expr, expected_result: i64) {
         println!("{:?}", e);
