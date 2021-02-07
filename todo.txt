@@ -17,7 +17,7 @@ x 2021-02-04 Write some R1-specific optimizer tests.
 x 2021-02-04 Extend your optimizer from R0 to R1.
 x 2021-02-07 Define data types for X0 program ASTs.
 x 2021-02-07 Write an emitter for X0 programs.
-Build a test suite of a dozen X0 programs.
+x 2021-02-07 Build a test suite of a dozen X0 programs.
 Write an interpreter for X0 programs.
 Connect your X0 test suite to your system assembler.
 Define data types for C0 program ASTs.

@@ -133,6 +133,10 @@ mod test_xprog {
     use super::Register::*;
     use super::*;
 
+    fn compile_and_run(_prog: &Program) -> Result<i64, String> {
+        unimplemented!();
+    }
+
     #[test]
     fn test_emit() {
         assert_eq!(Register::R10.emit(), "%R10");
@@ -143,15 +147,68 @@ mod test_xprog {
 
     #[test]
     fn test_xprog() {
-        let test_progs: Vec<Program> =
-            vec![
-                vec![("_main".to_string(), vec![Movq(Con(5), Reg(RAX)), Retq])]
-                    .into_iter()
-                    .collect::<HashMap<_, _>>(),
-            ];
+        let test_progs: Vec<(Program, i64)> = vec![
+            (
+                vec![(
+                    "_main".to_string(),
+                    vec![Movq(Con(5), Reg(RAX)), Movq(Con(6), Reg(R9)), Retq],
+                )]
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+                5,
+            ),
+            (
+                vec![(
+                    "_main".to_string(),
+                    vec![
+                        Movq(Con(5), Reg(RAX)),
+                        Movq(Con(6), Reg(R9)),
+                        Addq(Reg(R9), Reg(RAX)),
+                        Retq,
+                    ],
+                )]
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+                11,
+            ),
+            (
+                vec![
+                    ("foo".to_string(), vec![Movq(Con(33), Reg(RAX)), Retq]),
+                    ("_main".to_string(), vec![Jmp("foo".to_string()), Retq]),
+                ]
+                .into_iter()
+                .collect::<HashMap<_, _>>(),
+                33,
+            ),
+        ];
 
-        for test in test_progs {
-            println!("{}", test.emit());
+        for (test_prog, expected_res) in test_progs {
+            let res = compile_and_run(&test_prog);
+
+            match res {
+                Ok(n) => {
+                    assert_eq!(
+                        n,
+                        expected_res,
+                        "Program returned {} when it should have returned {}, Program: {}{}",
+                        n,
+                        expected_res,
+                        NEWLINE,
+                        test_prog.emit()
+                    );
+                }
+                Err(error) => {
+                    assert!(
+                        false,
+                        format!(
+                            "Compile failed with error {}, {}{}",
+                            error,
+                            NEWLINE,
+                            test_prog.emit()
+                        )
+                    );
+                }
+            }
         }
     }
 }
