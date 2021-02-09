@@ -9,7 +9,7 @@ trait Interp {
     fn interp(&self, env: &Env) -> Env;
 }
 
-const NEWLINE: &str = "\n\r";
+const NEWLINE: &str = "\n";
 
 #[derive(Clone)]
 struct Env {
@@ -48,9 +48,7 @@ impl Interp for Label {
         let get = env.block.get(self).clone();
         match get {
             Some(blk) => blk.clone().interp(env),
-            None => {
-                panic!("No label {} found in program", self)
-            }
+            None => panic!("No label {} found in program", self),
         }
     }
 }
@@ -92,16 +90,10 @@ enum Argument {
 impl Emit for Argument {
     fn emit(&self) -> String {
         match self {
-            Argument::Con(n) => {
-                format!("${}", n)
-            }
+            Argument::Con(n) => format!("${}", n),
             Argument::Reg(r) => r.emit(),
-            Argument::Deref(r, n) => {
-                format!("{}({})", r.emit(), n)
-            }
-            Argument::Ref(v) => {
-                format!("{}", v)
-            }
+            Argument::Deref(r, n) => format!("{}({})", r.emit(), n),
+            Argument::Ref(v) => format!("{}", v),
         }
     }
 }
@@ -122,7 +114,7 @@ enum Instruction {
 impl Emit for Instruction {
     fn emit(&self) -> String {
         fn binary(instr: &str, a1: &dyn Emit, a2: &dyn Emit) -> String {
-            format!("{} {} {}", instr, a1.emit(), a2.emit())
+            format!("{} {}, {}", instr, a1.emit(), a2.emit())
         };
         fn unary(instr: &str, a: &dyn Emit) -> String {
             format!("{} {}", instr, a.emit())
@@ -144,9 +136,7 @@ impl Emit for Instruction {
 
 fn set(dst: &Argument, val: &OType, env: &Env) -> Env {
     match dst {
-        Argument::Con(con) => {
-            panic!("Tried to set to a constant {} -> {:?}", con, dst)
-        }
+        Argument::Con(con) => panic!("Tried to set to a constant {} -> {:?}", con, dst),
         Argument::Reg(reg) => {
             let mut env_c = env.clone();
             env_c.register.insert(*reg, *val);
@@ -247,30 +237,97 @@ type Program = HashMap<Label, Block>;
 
 impl Emit for Program {
     fn emit(&self) -> String {
-        self.into_iter()
-            .map(|(lab, blk)| format!("{0}:{1}{2}{1}{1}", lab.emit(), NEWLINE, blk.emit()))
-            .fold("".to_string(), |acc, s| acc + &s)
+        String::new()
+            + ".globl main\n"
+            + self
+                .into_iter()
+                .map(|(lab, blk)| format!("{0}:{1}{2}{1}{1}", lab.emit(), NEWLINE, blk.emit()))
+                .fold("".to_string(), |acc, s| acc + s.as_str())
+                .as_str()
     }
 }
 
 impl Interp for Program {
     fn interp(&self, _: &Env) -> Env {
         let env = Env::new(self.clone());
-        Label::from("_main").interp(&env)
+        Label::from("main").interp(&env)
     }
 }
 
 #[cfg(test)]
 mod test_xprog {
-    use std::vec;
+    use std::{
+        fs::File,
+        io::{stderr, stdout, Write},
+        os::unix::process::ExitStatusExt,
+        process::{Command, Output},
+        vec,
+    };
+
+    use tempfile::tempdir;
 
     use super::Argument::*;
     use super::Instruction::*;
     use super::Register::*;
     use super::*;
 
-    fn compile_and_run(_prog: &Program) -> Result<i64, String> {
-        unimplemented!();
+    fn compile_and_run(prog: &String) -> Result<i32, String> {
+        // Create new file with arg string
+        let dir = tempdir().expect("Failled to alocate temp dir");
+        println!("TempDir: {:?}", dir.as_ref());
+        let temp_file = dir.path().join("asm.s");
+        let mut file = File::create(temp_file.clone()).expect("Failed to create temp file");
+        file.write_all(prog.as_bytes())
+            .expect("Failed to write asm to file");
+        // Assemble that file
+        let asmer = "gcc";
+        let temp_file_path = temp_file.as_path().to_str().unwrap();
+        let asm_args = &["-c", temp_file_path, "-g"];
+        let asm_res =
+            run_cmd_and_print(Command::new(asmer).current_dir(dir.as_ref()).args(asm_args));
+
+        match asm_res.status.code().unwrap() {
+            0 => println!("ASM Success"),
+            n => {
+                println!("ASM Failed with code {}", n);
+                stdout().write_all(&asm_res.stdout).unwrap();
+                stderr().write_all(&asm_res.stderr).unwrap();
+                return Err(format!("ASM Failed with code {}", n));
+            }
+        }
+
+        // Link that file
+        let linker = "gcc";
+        let linker_args = &["-o", "asm", "asm.o", "-g"];
+        let linker_res = run_cmd_and_print(
+            Command::new(linker)
+                .current_dir(dir.as_ref())
+                .args(linker_args),
+        );
+
+        match linker_res.status.code().unwrap() {
+            0 => println!("Link Success"),
+            n => {
+                println!("Link Failed with code {}", n);
+                stdout().write_all(&linker_res.stdout).unwrap();
+                stderr().write_all(&linker_res.stderr).unwrap();
+                return Err(format!("Link Failed with code {}", n));
+            }
+        }
+
+        // Run the resulting binary
+        let run_res = run_cmd_and_print(Command::new("./asm").current_dir(dir.as_ref()));
+
+        match run_res.status.code() {
+            Some(n) => Ok(n),
+            None => match run_res.status.signal() {
+                Some(sign) => Err(format!("Run Failure with sig {}", sign)),
+                None => Err("Run Unknown Failure".to_string()),
+            },
+        }
+    }
+    fn run_cmd_and_print(c: &mut Command) -> Output {
+        c.output().expect(&format!("CMD {:?} failed", c))
     }
 
     #[test]
@@ -285,7 +342,7 @@ mod test_xprog {
         let test_progs: Vec<(Program, i64)> = vec![
             (
                 vec![(
-                    "_main".to_string(),
+                    "main".to_string(),
                     vec![Movq(Con(5), Reg(RAX)), Movq(Con(6), Reg(R9)), Retq],
                 )]
                 .into_iter()
@@ -294,7 +351,7 @@ mod test_xprog {
             ),
             (
                 vec![(
-                    "_main".to_string(),
+                    "main".to_string(),
                     vec![
                         Movq(Con(5), Reg(RAX)),
                         Movq(Con(6), Reg(R9)),
@@ -309,7 +366,7 @@ mod test_xprog {
             (
                 vec![
                     ("foo".to_string(), vec![Movq(Con(33), Reg(RAX)), Retq]),
-                    ("_main".to_string(), vec![Jmp("foo".to_string()), Retq]),
+                    ("main".to_string(), vec![Jmp("foo".to_string()), Retq]),
                 ]
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
@@ -317,7 +374,7 @@ mod test_xprog {
             ),
             (
                 vec![(
-                    "_main".to_string(),
+                    "main".to_string(),
                     vec![
                         Movq(Con(5), Reg(RAX)),
                         Movq(Con(6), Reg(R9)),
@@ -338,7 +395,7 @@ mod test_xprog {
     #[test]
     fn test_xprog() {
         for (test_prog, expected_res) in get_test_progs() {
-            let res = compile_and_run(&test_prog);
+            let res = compile_and_run(&test_prog.emit());
             let interp_env = Env::new(HashMap::new());
             let res_env = test_prog.interp(&interp_env);
 
@@ -347,10 +404,10 @@ mod test_xprog {
             match res {
                 Ok(n) => {
                     assert_eq!(
-                        n,
+                        n as i64,
                         expected_res,
                         "Program returned {} when it should have returned {}, Program: {}{}",
-                        n,
+                        n as i64,
                         expected_res,
                         NEWLINE,
                         test_prog.emit()

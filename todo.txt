@@ -19,7 +19,7 @@ x 2021-02-07 Define data types for X0 program ASTs.
 x 2021-02-07 Write an emitter for X0 programs.
 x 2021-02-07 Build a test suite of a dozen X0 programs.
 x 2021-02-08 Write an interpreter for X0 programs.
-Connect your X0 test suite to your system assembler.
+x 2021-02-09 Connect your X0 test suite to your system assembler.
 Define data types for C0 program ASTs.
 Write a pretty printer for C0 programs.
 Build a test suite of a dozen C0 programs.
