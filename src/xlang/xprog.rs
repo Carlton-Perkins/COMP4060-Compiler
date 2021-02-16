@@ -4,49 +4,19 @@ use strum_macros;
 
 const NEWLINE: &str = "\n";
 
+type Var = usize;
+type OType = i64;
+type Label = String;
+type Address = usize;
+type Block = Vec<Instruction>;
+type Program = HashMap<Label, Block>;
+
 #[derive(Clone)]
 pub struct Env {
     register: HashMap<Register, OType>,
     variable: HashMap<Var, OType>,
     memory: HashMap<Address, OType>,
     block: Program,
-}
-
-impl Env {
-    fn new(prog: Program) -> Self {
-        Env {
-            register: HashMap::new(),
-            variable: HashMap::new(),
-            memory: HashMap::new(),
-            block: prog,
-        }
-    }
-}
-
-type Var = usize;
-
-type OType = i64;
-
-type Label = String;
-type Address = usize;
-
-impl Emit for Label {
-    fn emit(&self) -> String {
-        self.to_string()
-    }
-}
-
-impl Interp for Label {
-    type Env = Env;
-    type Output = Env;
-
-    fn interp(&self, env: &Self::Env) -> Self::Output {
-        let get = env.block.get(self).clone();
-        match get {
-            Some(blk) => blk.clone().interp(env),
-            None => panic!("No label {} found in program", self),
-        }
-    }
 }
 
 #[derive(Debug, strum_macros::ToString, PartialEq, Eq, Hash, Clone, Copy)]
@@ -69,29 +39,12 @@ enum Register {
     R15,
 }
 
-impl Emit for Register {
-    fn emit(&self) -> String {
-        format!("%{}", self.to_string())
-    }
-}
-
 #[derive(Clone, Copy, Debug)]
 enum Argument {
     Con(OType),
     Reg(Register),
     Deref(Register, OType),
     Ref(Var),
-}
-
-impl Emit for Argument {
-    fn emit(&self) -> String {
-        match self {
-            Argument::Con(n) => format!("${}", n),
-            Argument::Reg(r) => r.emit(),
-            Argument::Deref(r, n) => format!("{}({})", r.emit(), n),
-            Argument::Ref(v) => format!("{}", v),
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -105,6 +58,40 @@ enum Instruction {
     Jmp(Label),
     Pushq(Argument),
     Popq(Argument),
+}
+
+impl Env {
+    fn new(prog: Program) -> Self {
+        Env {
+            register: HashMap::new(),
+            variable: HashMap::new(),
+            memory: HashMap::new(),
+            block: prog,
+        }
+    }
+}
+
+impl Emit for Register {
+    fn emit(&self) -> String {
+        format!("%{}", self.to_string())
+    }
+}
+
+impl Emit for Label {
+    fn emit(&self) -> String {
+        self.to_string()
+    }
+}
+
+impl Emit for Argument {
+    fn emit(&self) -> String {
+        match self {
+            Argument::Con(n) => format!("${}", n),
+            Argument::Reg(r) => r.emit(),
+            Argument::Deref(r, n) => format!("{}({})", r.emit(), n),
+            Argument::Ref(v) => format!("{}", v),
+        }
+    }
 }
 
 impl Emit for Instruction {
@@ -127,6 +114,84 @@ impl Emit for Instruction {
             Instruction::Pushq(src) => unary("pushq", src),
             Instruction::Popq(dst) => unary("popq", dst),
         }
+    }
+}
+
+impl Emit for Block {
+    fn emit(&self) -> String {
+        self.into_iter()
+            .map(|x| x.emit() + NEWLINE)
+            .fold("".to_string(), |acc, s| acc + &s)
+    }
+}
+
+impl Emit for Program {
+    fn emit(&self) -> String {
+        String::new()
+            + ".globl main\n"
+            + self
+                .into_iter()
+                .map(|(lab, blk)| format!("{0}:{1}{2}{1}{1}", lab.emit(), NEWLINE, blk.emit()))
+                .fold("".to_string(), |acc, s| acc + s.as_str())
+                .as_str()
+    }
+}
+
+impl Interp for Label {
+    type Env = Env;
+    type Output = Env;
+
+    fn interp(&self, env: &Self::Env) -> Self::Output {
+        let get = env.block.get(self).clone();
+        match get {
+            Some(blk) => blk.clone().interp(env),
+            None => panic!("No label {} found in program", self),
+        }
+    }
+}
+
+impl Interp for Instruction {
+    type Env = Env;
+    type Output = Env;
+
+    fn interp(&self, env: &Self::Env) -> Self::Output {
+        match self {
+            Instruction::Addq(src, dst) => set(dst, &(value(src, env) + value(dst, env)), env),
+            Instruction::Subq(src, dst) => set(dst, &(value(src, env) - value(dst, env)), env),
+            Instruction::Movq(src, dst) => set(dst, &value(src, env), env),
+            Instruction::Retq => env.clone(),
+            Instruction::Negq(v) => set(v, &value(v, env), env),
+            Instruction::Callq(l) => l.interp(env),
+            Instruction::Jmp(l) => l.interp(env),
+            Instruction::Pushq(src) => push(src, env),
+            Instruction::Popq(dst) => pop(dst, env),
+        }
+    }
+}
+
+impl Interp for Block {
+    type Env = Env;
+    type Output = Env;
+
+    fn interp(&self, env: &Self::Env) -> Self::Output {
+        match self.split_first() {
+            Some((first, rest)) => rest
+                .into_iter()
+                .map(|x| x.clone())
+                .collect::<Block>()
+                .interp(&first.interp(&env)),
+            None => env.clone(),
+        }
+    }
+}
+
+impl Interp for Program {
+    type Env = Env;
+    type Output = Env;
+
+    fn interp(&self, _: &Self::Env) -> Self::Output {
+        let env = Self::Env::new(self.clone());
+        Label::from("main").interp(&env)
     }
 }
 
@@ -188,75 +253,6 @@ fn pop(dst: &Argument, env: &Env) -> Env {
         &(value(&Argument::Reg(Register::RSP), &env_c) + 8),
         &env_c,
     )
-}
-
-impl Interp for Instruction {
-    type Env = Env;
-    type Output = Env;
-
-    fn interp(&self, env: &Self::Env) -> Self::Output {
-        match self {
-            Instruction::Addq(src, dst) => set(dst, &(value(src, env) + value(dst, env)), env),
-            Instruction::Subq(src, dst) => set(dst, &(value(src, env) - value(dst, env)), env),
-            Instruction::Movq(src, dst) => set(dst, &value(src, env), env),
-            Instruction::Retq => env.clone(),
-            Instruction::Negq(v) => set(v, &value(v, env), env),
-            Instruction::Callq(l) => l.interp(env),
-            Instruction::Jmp(l) => l.interp(env),
-            Instruction::Pushq(src) => push(src, env),
-            Instruction::Popq(dst) => pop(dst, env),
-        }
-    }
-}
-
-type Block = Vec<Instruction>;
-
-impl Emit for Block {
-    fn emit(&self) -> String {
-        self.into_iter()
-            .map(|x| x.emit() + NEWLINE)
-            .fold("".to_string(), |acc, s| acc + &s)
-    }
-}
-
-impl Interp for Block {
-    type Env = Env;
-    type Output = Env;
-
-    fn interp(&self, env: &Self::Env) -> Self::Output {
-        match self.split_first() {
-            Some((first, rest)) => rest
-                .into_iter()
-                .map(|x| x.clone())
-                .collect::<Block>()
-                .interp(&first.interp(&env)),
-            None => env.clone(),
-        }
-    }
-}
-
-type Program = HashMap<Label, Block>;
-
-impl Emit for Program {
-    fn emit(&self) -> String {
-        String::new()
-            + ".globl main\n"
-            + self
-                .into_iter()
-                .map(|(lab, blk)| format!("{0}:{1}{2}{1}{1}", lab.emit(), NEWLINE, blk.emit()))
-                .fold("".to_string(), |acc, s| acc + s.as_str())
-                .as_str()
-    }
-}
-
-impl Interp for Program {
-    type Env = Env;
-    type Output = Env;
-
-    fn interp(&self, _: &Self::Env) -> Self::Output {
-        let env = Self::Env::new(self.clone());
-        Label::from("main").interp(&env)
-    }
 }
 
 #[cfg(test)]

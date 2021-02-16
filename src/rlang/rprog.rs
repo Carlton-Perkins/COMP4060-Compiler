@@ -2,8 +2,9 @@ pub use crate::common::{InterpMut, IsPure};
 use std::collections::HashMap;
 
 pub type Var = usize;
-
 use i64 as OType;
+pub type Program = Expr;
+use Expr::*;
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Num(i64),
@@ -17,9 +18,6 @@ pub struct Env {
     read_count: isize,
     vars: HashMap<Var, OType>,
 }
-
-pub type Program = Expr;
-use Expr::*;
 
 impl Env {
     pub fn new() -> Self {
