@@ -1,18 +1,11 @@
+use crate::common::{Emit, Interp};
 use std::collections::HashMap;
 use strum_macros;
-
-trait Emit {
-    fn emit(&self) -> String;
-}
-
-trait Interp {
-    fn interp(&self, env: &Env) -> Env;
-}
 
 const NEWLINE: &str = "\n";
 
 #[derive(Clone)]
-struct Env {
+pub struct Env {
     register: HashMap<Register, OType>,
     variable: HashMap<Var, OType>,
     memory: HashMap<Address, OType>,
@@ -44,7 +37,10 @@ impl Emit for Label {
 }
 
 impl Interp for Label {
-    fn interp(&self, env: &Env) -> Env {
+    type Env = Env;
+    type Output = Env;
+
+    fn interp(&self, env: &Self::Env) -> Self::Output {
         let get = env.block.get(self).clone();
         match get {
             Some(blk) => blk.clone().interp(env),
@@ -195,7 +191,10 @@ fn pop(dst: &Argument, env: &Env) -> Env {
 }
 
 impl Interp for Instruction {
-    fn interp(&self, env: &Env) -> Env {
+    type Env = Env;
+    type Output = Env;
+
+    fn interp(&self, env: &Self::Env) -> Self::Output {
         match self {
             Instruction::Addq(src, dst) => set(dst, &(value(src, env) + value(dst, env)), env),
             Instruction::Subq(src, dst) => set(dst, &(value(src, env) - value(dst, env)), env),
@@ -221,7 +220,10 @@ impl Emit for Block {
 }
 
 impl Interp for Block {
-    fn interp(&self, env: &Env) -> Env {
+    type Env = Env;
+    type Output = Env;
+
+    fn interp(&self, env: &Self::Env) -> Self::Output {
         match self.split_first() {
             Some((first, rest)) => rest
                 .into_iter()
@@ -248,8 +250,11 @@ impl Emit for Program {
 }
 
 impl Interp for Program {
-    fn interp(&self, _: &Env) -> Env {
-        let env = Env::new(self.clone());
+    type Env = Env;
+    type Output = Env;
+
+    fn interp(&self, _: &Self::Env) -> Self::Output {
+        let env = Self::Env::new(self.clone());
         Label::from("main").interp(&env)
     }
 }

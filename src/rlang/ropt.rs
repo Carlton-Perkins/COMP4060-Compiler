@@ -74,7 +74,7 @@ pub fn opt(e: Expr, env: &OptEnv) -> Expr {
 mod test_ropt {
     use super::*;
     use crate::rlang::rrandp::{randp, RandEnv};
-    use crate::rlang::{Env, Interp};
+    use crate::rlang::{Env, InterpMut};
 
     fn a_opt(e: Expr, expected_opt: Expr, expected_result: i64) {
         println!("{:?}", e);

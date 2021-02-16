@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 mod rprog;
-pub use rprog::{Env, Expr, Interp, IsPure, Program, Var};
+pub use rprog::{Env, Expr, InterpMut, IsPure, Program, Var};
 
 #[allow(dead_code)]
 mod rrandp;

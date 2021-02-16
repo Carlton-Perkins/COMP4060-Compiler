@@ -56,7 +56,7 @@ pub fn randp(depth: usize, env: &RandEnv) -> Expr {
 #[cfg(test)]
 mod test_rrandp {
     use super::*;
-    use crate::rlang::{Env, Interp};
+    use crate::rlang::{Env, InterpMut};
 
     #[test]
     #[ignore = "Slow"]

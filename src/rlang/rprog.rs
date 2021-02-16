@@ -1,3 +1,4 @@
+pub use crate::common::{InterpMut, IsPure};
 use std::collections::HashMap;
 
 pub type Var = usize;
@@ -16,12 +17,7 @@ pub struct Env {
     read_count: isize,
     vars: HashMap<Var, OType>,
 }
-pub trait Interp {
-    fn interp(&self, env: &mut Env) -> OType;
-}
-pub trait IsPure {
-    fn is_pure(&self) -> bool;
-}
+
 pub type Program = Expr;
 use Expr::*;
 
@@ -47,8 +43,11 @@ impl IsPure for Expr {
     }
 }
 
-impl Interp for Expr {
-    fn interp(&self, env: &mut Env) -> OType {
+impl InterpMut for Expr {
+    type Env = Env;
+    type Output = OType;
+
+    fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             Num(n) => *n,
             Read => {
