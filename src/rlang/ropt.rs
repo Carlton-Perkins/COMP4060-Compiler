@@ -1,5 +1,5 @@
 use crate::rlang::Expr::*;
-use crate::rlang::{Expr, Var};
+use crate::rlang::{Expr, IsPure, Var};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -54,7 +54,7 @@ pub fn opt(e: Expr, env: &OptEnv) -> Expr {
         Let(id, ve, be) => {
             let o_ve = opt(*ve, env);
 
-            if Expr::is_pure(&o_ve) {
+            if o_ve.is_pure() {
                 let mut new_env = env.clone();
                 new_env.vars.insert(id, o_ve);
                 opt(*be, &new_env)
@@ -74,13 +74,13 @@ pub fn opt(e: Expr, env: &OptEnv) -> Expr {
 mod test_ropt {
     use super::*;
     use crate::rlang::rrandp::{randp, RandEnv};
-    use crate::rlang::{interp, Env};
+    use crate::rlang::{Env, Interp};
 
     fn a_opt(e: Expr, expected_opt: Expr, expected_result: i64) {
         println!("{:?}", e);
-        let e_res = interp((e.clone(), &mut Env::new()));
+        let e_res = e.clone().interp(&mut Env::new());
         let opt = opt(e.clone(), &OptEnv::new());
-        let opt_res = interp((opt.clone(), &mut Env::new()));
+        let opt_res = opt.clone().interp(&mut Env::new());
 
         assert_eq!(
             opt, expected_opt,
@@ -166,9 +166,9 @@ mod test_ropt {
         for depth in 0..20 {
             for _ in 0..100 {
                 let e = randp(depth, &RandEnv::new());
-                let e_res = interp((e.clone(), &mut Env::new()));
+                let e_res = e.clone().interp(&mut Env::new());
                 let opt = opt(e.clone(), &OptEnv::new());
-                let opt_res = interp((opt.clone(), &mut Env::new()));
+                let opt_res = opt.interp(&mut Env::new());
 
                 assert_eq!(e_res, opt_res, "'{:?}' does not equal '{:?}'", e, opt);
             }

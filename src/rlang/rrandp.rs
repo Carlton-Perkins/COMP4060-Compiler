@@ -56,7 +56,7 @@ pub fn randp(depth: usize, env: &RandEnv) -> Expr {
 #[cfg(test)]
 mod test_rrandp {
     use super::*;
-    use crate::rlang::{interp, Env};
+    use crate::rlang::{Env, Interp};
 
     #[test]
     #[ignore = "Slow"]
@@ -64,8 +64,7 @@ mod test_rrandp {
         for depth in 0..10 {
             for _ in 0..100 {
                 let e = randp(depth, &RandEnv::new());
-                let prog = (e.clone(), &mut Env::new());
-                println!("{:?} -> {}", e, interp(prog));
+                println!("{:?} -> {}", e, e.interp(&mut Env::new()));
             }
         }
     }

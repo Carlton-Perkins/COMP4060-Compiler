@@ -1,4 +1,8 @@
 use std::collections::HashMap;
+
+pub type Var = usize;
+
+use i64 as OType;
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Num(i64),
@@ -8,17 +12,18 @@ pub enum Expr {
     Let(Var, Box<Expr>, Box<Expr>),
     Var(Var),
 }
-
-pub type Var = usize;
-
-use i64 as OType;
-use Expr::*;
-
-pub type Program<'a> = (Expr, &'a mut Env);
 pub struct Env {
     read_count: isize,
     vars: HashMap<Var, OType>,
 }
+pub trait Interp {
+    fn interp(&self, env: &mut Env) -> OType;
+}
+pub trait IsPure {
+    fn is_pure(&self) -> bool;
+}
+pub type Program = Expr;
+use Expr::*;
 
 impl Env {
     pub fn new() -> Self {
@@ -29,35 +34,37 @@ impl Env {
     }
 }
 
-impl Expr {
-    pub fn is_pure(e: &Self) -> bool {
-        match e {
+impl IsPure for Expr {
+    fn is_pure(&self) -> bool {
+        match self {
             Num(_) => true,
             Read => false,
-            Negate(ex) => Expr::is_pure(ex),
-            Add(lh, rh) => Expr::is_pure(lh) && Expr::is_pure(rh),
-            Let(_, ve, be) => Expr::is_pure(ve) && Expr::is_pure(be),
+            Negate(ex) => ex.is_pure(),
+            Add(lh, rh) => lh.is_pure() && rh.is_pure(),
+            Let(_, ve, be) => ve.is_pure() && be.is_pure(),
             Var(_) => true,
         }
     }
 }
 
-pub fn interp((expr, mut env): Program) -> OType {
-    match expr {
-        Num(n) => n,
-        Read => {
-            let res = env.read_count as i64;
-            env.read_count += 1;
-            res
+impl Interp for Expr {
+    fn interp(&self, env: &mut Env) -> OType {
+        match self {
+            Num(n) => *n,
+            Read => {
+                let res = env.read_count as i64;
+                env.read_count += 1;
+                res
+            }
+            Negate(ex) => -1 * ex.interp(env),
+            Add(lh, rh) => lh.interp(env) + rh.interp(env),
+            Let(v, ve, be) => {
+                let value = ve.interp(env);
+                env.vars.insert(*v, value);
+                be.interp(env)
+            }
+            Var(n) => env.vars[&n],
         }
-        Negate(ex) => -1 * interp((*ex, &mut env)),
-        Add(lh, rh) => interp((*lh, &mut env)) + interp((*rh, &mut env)),
-        Let(v, ve, be) => {
-            let value = interp((*ve, env));
-            env.vars.insert(v, value);
-            interp((*be, env))
-        }
-        Var(n) => env.vars[&n],
     }
 }
 
@@ -66,8 +73,7 @@ mod test_rprog {
     use super::*;
 
     fn a_interp(expr: Expr, expect: OType) {
-        let prog = (expr.clone(), &mut Env::new());
-        let res = interp(prog);
+        let res = expr.clone().interp(&mut Env::new());
         assert_eq!(
             res, expect,
             "Program {:?} does not eval to {}, but instead {}",
