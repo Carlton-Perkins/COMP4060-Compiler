@@ -25,7 +25,7 @@ x 2021-02-14 Write a pretty printer for C0 programs.
 x 2021-02-16 Build a test suite of a dozen C0 programs.
 x 2021-02-16 Write an interpreter for C0 programs.
 x 2021-02-16 Write a few tests for uniquify that predict its output.
-Implement the uniquify pass for R1 programs.
+x 2021-02-16 Implement the uniquify pass for R1 programs.
 Connect uniquify to your test suite.
 Write a half-dozen tests for resolve-complex that predict its output.
 Implement the resolve-complex pass for R1 programs.

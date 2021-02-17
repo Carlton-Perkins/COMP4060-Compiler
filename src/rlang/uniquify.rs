@@ -28,7 +28,27 @@ impl Uniquify for Program {
     type Output = Program;
 
     fn uniquify(&self, env: &mut Self::Env) -> Self::Output {
-        unimplemented!()
+        use Expr::*;
+        match self {
+            Num(_) => self.clone(),
+            Read => self.clone(),
+            Negate(ex) => Negate(Box::new(ex.uniquify(env))),
+            Add(lh, rh) => Add(Box::new(lh.uniquify(env)), Box::new(rh.uniquify(env))),
+            Let(v, ve, be) => {
+                let nv = format!("u{}", env.var_counter);
+                env.var_counter += 1;
+                let nve = ve.uniquify(env);
+
+                env.var_map.insert(v.into(), nv.clone());
+                let nbe = be.uniquify(env);
+
+                Let(nv, Box::new(nve), Box::new(nbe))
+            }
+            Var(v) => match env.var_map.get(v) {
+                Some(nv) => Var(nv.into()),
+                None => panic!("Uniquify unbound variable"),
+            },
+        }
     }
 }
 
@@ -105,7 +125,7 @@ mod test_uniquify {
                     Box::new(Num(5)),
                     Box::new(Let(
                         "0".into(),
-                        Box::new(Read),
+                        Box::new(Add(Box::new(Read), Box::new(Num(1)))),
                         Box::new(Add(Box::new(Var("0".into())), Box::new(Var("0".into())))),
                     )),
                 ),
@@ -114,11 +134,11 @@ mod test_uniquify {
                     Box::new(Num(5)),
                     Box::new(Let(
                         "u1".into(),
-                        Box::new(Read),
-                        Box::new(Add(Box::new(Var("u0".into())), Box::new(Var("u1".into())))),
+                        Box::new(Add(Box::new(Read), Box::new(Num(1)))),
+                        Box::new(Add(Box::new(Var("u1".into())), Box::new(Var("u1".into())))),
                     )),
                 ),
-                5,
+                2,
             ),
         ];
 
