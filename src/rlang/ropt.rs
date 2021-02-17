@@ -1,11 +1,11 @@
 use crate::rlang::Expr::*;
-use crate::rlang::{Expr, IsPure, Var};
+use crate::rlang::{Expr, IsPure, Variable};
 use std::collections::HashMap;
 
 #[derive(Clone)]
 
 pub struct OptEnv {
-    vars: HashMap<Var, Expr>,
+    vars: HashMap<Variable, Expr>,
 }
 
 impl OptEnv {
@@ -121,34 +121,42 @@ mod test_ropt {
     #[test]
     fn test_opt_r1() {
         let test_expr = vec![
-            (Let(0, Box::new(Num(0)), Box::new(Num(1))), Num(1), 1),
-            (Let(0, Box::new(Num(5)), Box::new(Read)), Read, 0),
-            (Let(0, Box::new(Num(5)), Box::new(Var(0))), Num(5), 5),
             (
-                Let(0, Box::new(Read), Box::new(Var(0))),
-                Let(0, Box::new(Read), Box::new(Var(0))),
+                Let("0".into(), Box::new(Num(0)), Box::new(Num(1))),
+                Num(1),
+                1,
+            ),
+            (Let("0".into(), Box::new(Num(5)), Box::new(Read)), Read, 0),
+            (
+                Let("0".into(), Box::new(Num(5)), Box::new(Var("0".into()))),
+                Num(5),
+                5,
+            ),
+            (
+                Let("0".into(), Box::new(Read), Box::new(Var("0".into()))),
+                Let("0".into(), Box::new(Read), Box::new(Var("0".into()))),
                 0,
             ),
             (
                 Let(
-                    0,
+                    "0".into(),
                     Box::new(Num(5)),
-                    Box::new(Let(0, Box::new(Num(6)), Box::new(Var(0)))),
+                    Box::new(Let("0".into(), Box::new(Num(6)), Box::new(Var("0".into())))),
                 ),
                 Num(6),
                 6,
             ),
             (
                 Let(
-                    0,
+                    "0".into(),
                     Box::new(Num(3)),
                     Box::new(Let(
-                        1,
+                        "1".into(),
                         Box::new(Num(2)),
                         Box::new(Let(
-                            2,
-                            Box::new(Add(Box::new(Var(0)), Box::new(Var(1)))),
-                            Box::new(Add(Box::new(Read), Box::new(Var(2)))),
+                            "2".into(),
+                            Box::new(Add(Box::new(Var("0".into())), Box::new(Var("1".into())))),
+                            Box::new(Add(Box::new(Read), Box::new(Var("2".into())))),
                         )),
                     )),
                 ),

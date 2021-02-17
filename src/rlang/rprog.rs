@@ -1,8 +1,8 @@
 pub use crate::common::{InterpMut, IsPure};
 use std::collections::HashMap;
 
-pub type Var = usize;
-use i64 as OType;
+pub type Variable = String;
+pub use i64 as OType;
 pub type Program = Expr;
 use Expr::*;
 #[derive(Debug, PartialEq, Clone)]
@@ -11,12 +11,12 @@ pub enum Expr {
     Read,
     Negate(Box<Expr>),
     Add(Box<Expr>, Box<Expr>),
-    Let(Var, Box<Expr>, Box<Expr>),
-    Var(Var),
+    Let(Variable, Box<Expr>, Box<Expr>),
+    Var(Variable),
 }
 pub struct Env {
     read_count: isize,
-    vars: HashMap<Var, OType>,
+    vars: HashMap<Variable, OType>,
 }
 
 impl Env {
@@ -57,10 +57,10 @@ impl InterpMut for Expr {
             Add(lh, rh) => lh.interp(env) + rh.interp(env),
             Let(v, ve, be) => {
                 let value = ve.interp(env);
-                env.vars.insert(*v, value);
+                env.vars.insert(v.clone(), value);
                 be.interp(env)
             }
-            Var(n) => env.vars[&n],
+            Var(n) => env.vars[n],
         }
     }
 }
@@ -114,35 +114,35 @@ mod test_rprog {
     #[test]
     fn test_r1() {
         let tests = vec![
-            (Let(0, Box::new(Num(0)), Box::new(Read)), 0),
+            (Let("0".into(), Box::new(Num(0)), Box::new(Read)), 0),
             (
                 Let(
-                    0,
+                    "0".into(),
                     Box::new(Num(0)),
-                    Box::new(Let(0, Box::new(Num(1)), Box::new(Var(0)))),
+                    Box::new(Let("0".into(), Box::new(Num(1)), Box::new(Var("0".into())))),
                 ),
                 1,
             ),
             (
                 Let(
-                    0,
+                    "0".into(),
                     Box::new(Num(4)),
                     Box::new(Let(
-                        1,
+                        "1".into(),
                         Box::new(Num(5)),
-                        Box::new(Add(Box::new(Var(0)), Box::new(Var(1)))),
+                        Box::new(Add(Box::new(Var("0".into())), Box::new(Var("1".into())))),
                     )),
                 ),
                 9,
             ),
             (
                 Let(
-                    0,
+                    "0".into(),
                     Box::new(Read),
                     Box::new(Let(
-                        1,
+                        "1".into(),
                         Box::new(Read),
-                        Box::new(Add(Box::new(Var(0)), Box::new(Var(1)))),
+                        Box::new(Add(Box::new(Var("0".into())), Box::new(Var("1".into())))),
                     )),
                 ),
                 1,

@@ -1,10 +1,10 @@
 use crate::rlang::Expr::*;
-use crate::rlang::{Expr, Var};
+use crate::rlang::{Expr, Variable};
 use rand::prelude::*;
 
 #[derive(Clone)]
 pub struct RandEnv {
-    vars: Vec<Var>,
+    vars: Vec<Variable>,
 }
 
 impl RandEnv {
@@ -19,7 +19,7 @@ pub fn randp(depth: usize, env: &RandEnv) -> Expr {
     let do_num = |_: usize, _: &RandEnv| -> Expr { Num(random::<i8>() as i64) };
     let do_var = |_: usize, env: &RandEnv| -> Expr {
         let mut rng = thread_rng();
-        Var(*(env.vars.choose(&mut rng).unwrap()))
+        Var((env.vars.choose(&mut rng).unwrap()).to_string())
     };
     let mut do_dzero: Vec<DoType> = vec![Box::new(do_read), Box::new(do_num)];
     if env.vars.len() > 0 {
@@ -36,8 +36,8 @@ pub fn randp(depth: usize, env: &RandEnv) -> Expr {
         |depth: usize, env: &RandEnv| -> Expr { Negate(Box::new(randp(depth - 1, env))) };
     let do_let = |depth: usize, env: &RandEnv| -> Expr {
         let mut new_env = env.clone();
-        let new_var = new_env.vars.len();
-        new_env.vars.push(new_var);
+        let new_var = new_env.vars.len().to_string();
+        new_env.vars.push(new_var.clone());
         Let(
             new_var,
             Box::new(randp(depth - 1, env)),
