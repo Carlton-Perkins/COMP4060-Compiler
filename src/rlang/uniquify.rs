@@ -56,6 +56,7 @@ impl Uniquify for Program {
 mod test_uniquify {
     use super::*;
     use crate::rlang::Expr::*;
+    use crate::rlang::{randp, RandEnv};
     use crate::rlang::{Env, InterpMut, OType};
 
     type Test = (Program, Program, OType);
@@ -143,5 +144,20 @@ mod test_uniquify {
         ];
 
         a_uni_all(tests);
+    }
+
+    #[test]
+    #[ignore = "Slow"]
+    fn test_uniquify_randp() {
+        for depth in 0..10 {
+            for _ in 0..100 {
+                let program = randp(depth, &RandEnv::new());
+                let program_res = program.interp(&mut Env::new());
+                let uni = program.uniquify(&mut UEnv::new());
+                let unit_res = uni.interp(&mut Env::new());
+
+                assert_eq!(program_res, unit_res)
+            }
+        }
     }
 }
