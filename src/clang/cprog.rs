@@ -1,28 +1,17 @@
+use crate::common::InterpMut;
 use std::collections::HashMap;
-
-trait Interp {
-    fn interp(&self, env: &mut Env) -> Number;
-}
 
 type Variable = usize;
 type Number = i64;
 type Label = String;
+type LabelMapping = HashMap<Label, Tail>;
+type Program = LabelMapping;
 
 #[derive(Clone)]
-struct Env {
+pub struct Env {
     read_count: usize,
     block_map: LabelMapping,
     var_map: HashMap<Variable, Number>,
-}
-
-impl Env {
-    fn new(prog: &Program) -> Self {
-        Env {
-            read_count: 0,
-            block_map: prog.clone(),
-            var_map: HashMap::new(),
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -50,11 +39,21 @@ enum Tail {
     Seq(Statement, Box<Tail>),
 }
 
-type LabelMapping = HashMap<Label, Tail>;
-type Program = LabelMapping;
+impl Env {
+    fn new(prog: &Program) -> Self {
+        Env {
+            read_count: 0,
+            block_map: prog.clone(),
+            var_map: HashMap::new(),
+        }
+    }
+}
 
-impl Interp for Label {
-    fn interp(&self, env: &mut Env) -> Number {
+impl InterpMut for Label {
+    type Env = Env;
+    type Output = Number;
+
+    fn interp(&self, env: &mut Self::Env) -> Self::Output {
         let target = env
             .clone()
             .block_map
@@ -65,8 +64,11 @@ impl Interp for Label {
     }
 }
 
-impl Interp for Program {
-    fn interp(&self, _: &mut Env) -> Number {
+impl InterpMut for Program {
+    type Env = Env;
+    type Output = Number;
+
+    fn interp(&self, _: &mut Self::Env) -> Self::Output {
         let mut env = Env::new(self);
         let entry_point = Label::from("main");
 
@@ -74,8 +76,11 @@ impl Interp for Program {
     }
 }
 
-impl Interp for Tail {
-    fn interp(&self, env: &mut Env) -> Number {
+impl InterpMut for Tail {
+    type Env = Env;
+    type Output = Number;
+
+    fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             Tail::Return(ret) => ret.interp(env),
             Tail::Seq(ex, rest) => {
@@ -86,8 +91,11 @@ impl Interp for Tail {
     }
 }
 
-impl Interp for Statement {
-    fn interp(&self, env: &mut Env) -> Number {
+impl InterpMut for Statement {
+    type Env = Env;
+    type Output = Number;
+
+    fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             Statement::Set(v, ex) => {
                 let val = ex.interp(env);
@@ -98,8 +106,11 @@ impl Interp for Statement {
     }
 }
 
-impl Interp for Argument {
-    fn interp(&self, env: &mut Env) -> Number {
+impl InterpMut for Argument {
+    type Env = Env;
+    type Output = Number;
+
+    fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             Argument::Num(n) => *n,
             Argument::Var(v) => *env.var_map.get(v).expect("Undefined variable"),
@@ -107,8 +118,11 @@ impl Interp for Argument {
     }
 }
 
-impl Interp for Expresion {
-    fn interp(&self, env: &mut Env) -> Number {
+impl InterpMut for Expresion {
+    type Env = Env;
+    type Output = Number;
+
+    fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             Expresion::Arg(a) => a.interp(env),
             Expresion::Read() => {
