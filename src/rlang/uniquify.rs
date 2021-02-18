@@ -57,15 +57,15 @@ mod test_uniquify {
     use super::*;
     use crate::rlang::Expr::*;
     use crate::rlang::{randp, RandEnv};
-    use crate::rlang::{Env, InterpMut, OType};
+    use crate::rlang::{REnv, InterpMut, OType};
 
     type Test = (Program, Program, OType);
     type Tests = Vec<Test>;
 
     fn a_uni((start_program, expected_uni_program, expected_res): Test) {
         let uni_program = start_program.uniquify(&mut UEnv::new());
-        let uni_res = uni_program.interp(&mut Env::new());
-        let start_res = start_program.interp(&mut Env::new());
+        let uni_res = uni_program.interp(&mut REnv::new());
+        let start_res = start_program.interp(&mut REnv::new());
 
         assert_eq!(
             start_res, expected_res,
@@ -152,9 +152,9 @@ mod test_uniquify {
         for depth in 0..10 {
             for _ in 0..100 {
                 let program = randp(depth, &RandEnv::new());
-                let program_res = program.interp(&mut Env::new());
+                let program_res = program.interp(&mut REnv::new());
                 let uni = program.uniquify(&mut UEnv::new());
-                let unit_res = uni.interp(&mut Env::new());
+                let unit_res = uni.interp(&mut REnv::new());
 
                 assert_eq!(program_res, unit_res)
             }

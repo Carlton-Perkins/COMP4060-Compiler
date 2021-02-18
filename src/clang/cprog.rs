@@ -8,7 +8,7 @@ type LabelMapping = HashMap<Label, Tail>;
 type Program = LabelMapping;
 
 #[derive(Clone)]
-pub struct Env {
+pub struct CEnv {
     read_count: usize,
     block_map: LabelMapping,
     var_map: HashMap<Variable, Number>,
@@ -39,9 +39,9 @@ enum Tail {
     Seq(Statement, Box<Tail>),
 }
 
-impl Env {
+impl CEnv {
     fn new(prog: &Program) -> Self {
-        Env {
+        CEnv {
             read_count: 0,
             block_map: prog.clone(),
             var_map: HashMap::new(),
@@ -50,7 +50,7 @@ impl Env {
 }
 
 impl InterpMut for Label {
-    type Env = Env;
+    type Env = CEnv;
     type Output = Number;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
@@ -65,11 +65,11 @@ impl InterpMut for Label {
 }
 
 impl InterpMut for Program {
-    type Env = Env;
+    type Env = CEnv;
     type Output = Number;
 
     fn interp(&self, _: &mut Self::Env) -> Self::Output {
-        let mut env = Env::new(self);
+        let mut env = Self::Env::new(self);
         let entry_point = Label::from("main");
 
         entry_point.interp(&mut env)
@@ -77,7 +77,7 @@ impl InterpMut for Program {
 }
 
 impl InterpMut for Tail {
-    type Env = Env;
+    type Env = CEnv;
     type Output = Number;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
@@ -92,7 +92,7 @@ impl InterpMut for Tail {
 }
 
 impl InterpMut for Statement {
-    type Env = Env;
+    type Env = CEnv;
     type Output = Number;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
@@ -107,7 +107,7 @@ impl InterpMut for Statement {
 }
 
 impl InterpMut for Argument {
-    type Env = Env;
+    type Env = CEnv;
     type Output = Number;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
@@ -119,7 +119,7 @@ impl InterpMut for Argument {
 }
 
 impl InterpMut for Expresion {
-    type Env = Env;
+    type Env = CEnv;
     type Output = Number;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
@@ -219,7 +219,7 @@ mod test_cprog {
         ];
 
         for (test_program, expected_res) in test_progs {
-            let res = test_program.interp(&mut Env::new(&test_program));
+            let res = test_program.interp(&mut CEnv::new(&test_program));
 
             assert_eq!(
                 res, expected_res,
@@ -243,7 +243,7 @@ mod test_cprog {
         )];
 
         for (test_program, expected_res) in test_progs {
-            let res = test_program.interp(&mut Env::new(&test_program));
+            let res = test_program.interp(&mut CEnv::new(&test_program));
 
             assert_eq!(
                 res, expected_res,

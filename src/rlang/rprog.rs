@@ -14,14 +14,14 @@ pub enum Expr {
     Let(Variable, Box<Expr>, Box<Expr>),
     Var(Variable),
 }
-pub struct Env {
+pub struct REnv {
     read_count: isize,
     vars: HashMap<Variable, OType>,
 }
 
-impl Env {
+impl REnv {
     pub fn new() -> Self {
-        Env {
+        REnv {
             read_count: 0,
             vars: HashMap::new(),
         }
@@ -42,7 +42,7 @@ impl IsPure for Expr {
 }
 
 impl InterpMut for Expr {
-    type Env = Env;
+    type Env = REnv;
     type Output = OType;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
@@ -70,7 +70,7 @@ mod test_rprog {
     use super::*;
 
     fn a_interp(expr: Expr, expect: OType) {
-        let res = expr.clone().interp(&mut Env::new());
+        let res = expr.clone().interp(&mut REnv::new());
         assert_eq!(
             res, expect,
             "Program {:?} does not eval to {}, but instead {}",

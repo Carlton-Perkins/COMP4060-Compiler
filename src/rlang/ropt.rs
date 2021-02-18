@@ -74,13 +74,13 @@ pub fn opt(e: Expr, env: &OptEnv) -> Expr {
 mod test_ropt {
     use super::*;
     use crate::rlang::rrandp::{randp, RandEnv};
-    use crate::rlang::{Env, InterpMut};
+    use crate::rlang::{REnv, InterpMut};
 
     fn a_opt(e: Expr, expected_opt: Expr, expected_result: i64) {
         println!("{:?}", e);
-        let e_res = e.clone().interp(&mut Env::new());
+        let e_res = e.clone().interp(&mut REnv::new());
         let opt = opt(e.clone(), &OptEnv::new());
-        let opt_res = opt.clone().interp(&mut Env::new());
+        let opt_res = opt.clone().interp(&mut REnv::new());
 
         assert_eq!(
             opt, expected_opt,
@@ -174,9 +174,9 @@ mod test_ropt {
         for depth in 0..20 {
             for _ in 0..100 {
                 let e = randp(depth, &RandEnv::new());
-                let e_res = e.clone().interp(&mut Env::new());
+                let e_res = e.clone().interp(&mut REnv::new());
                 let opt = opt(e.clone(), &OptEnv::new());
-                let opt_res = opt.interp(&mut Env::new());
+                let opt_res = opt.interp(&mut REnv::new());
 
                 assert_eq!(e_res, opt_res, "'{:?}' does not equal '{:?}'", e, opt);
             }

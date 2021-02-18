@@ -12,7 +12,7 @@ type Block = Vec<Instruction>;
 type Program = HashMap<Label, Block>;
 
 #[derive(Clone)]
-pub struct Env {
+pub struct XEnv {
     register: HashMap<Register, OType>,
     variable: HashMap<Var, OType>,
     memory: HashMap<Address, OType>,
@@ -60,9 +60,9 @@ enum Instruction {
     Popq(Argument),
 }
 
-impl Env {
+impl XEnv {
     fn new(prog: Program) -> Self {
-        Env {
+        XEnv {
             register: HashMap::new(),
             variable: HashMap::new(),
             memory: HashMap::new(),
@@ -138,8 +138,8 @@ impl Emit for Program {
 }
 
 impl Interp for Label {
-    type Env = Env;
-    type Output = Env;
+    type Env = XEnv;
+    type Output = XEnv;
 
     fn interp(&self, env: &Self::Env) -> Self::Output {
         let get = env.block.get(self).clone();
@@ -151,8 +151,8 @@ impl Interp for Label {
 }
 
 impl Interp for Instruction {
-    type Env = Env;
-    type Output = Env;
+    type Env = XEnv;
+    type Output = XEnv;
 
     fn interp(&self, env: &Self::Env) -> Self::Output {
         match self {
@@ -170,8 +170,8 @@ impl Interp for Instruction {
 }
 
 impl Interp for Block {
-    type Env = Env;
-    type Output = Env;
+    type Env = XEnv;
+    type Output = XEnv;
 
     fn interp(&self, env: &Self::Env) -> Self::Output {
         match self.split_first() {
@@ -186,8 +186,8 @@ impl Interp for Block {
 }
 
 impl Interp for Program {
-    type Env = Env;
-    type Output = Env;
+    type Env = XEnv;
+    type Output = XEnv;
 
     fn interp(&self, _: &Self::Env) -> Self::Output {
         let env = Self::Env::new(self.clone());
@@ -195,7 +195,7 @@ impl Interp for Program {
     }
 }
 
-fn set(dst: &Argument, val: &OType, env: &Env) -> Env {
+fn set(dst: &Argument, val: &OType, env: &XEnv) -> XEnv {
     match dst {
         Argument::Con(con) => panic!("Tried to set to a constant {} -> {:?}", con, dst),
         Argument::Reg(reg) => {
@@ -218,7 +218,7 @@ fn set(dst: &Argument, val: &OType, env: &Env) -> Env {
     }
 }
 
-fn value(arg: &Argument, env: &Env) -> OType {
+fn value(arg: &Argument, env: &XEnv) -> OType {
     match arg {
         Argument::Con(c) => *c,
         Argument::Reg(reg) => *env.register.get(reg).unwrap_or(&0), // Default registers to 0
@@ -233,7 +233,7 @@ fn value(arg: &Argument, env: &Env) -> OType {
     }
 }
 
-fn push(src: &Argument, env: &Env) -> Env {
+fn push(src: &Argument, env: &XEnv) -> XEnv {
     let mut env_c = env.clone();
     let val = value(src, &env_c);
     env_c = set(
@@ -244,7 +244,7 @@ fn push(src: &Argument, env: &Env) -> Env {
     set(&Argument::Deref(Register::RSP, 0), &val, &env_c)
 }
 
-fn pop(dst: &Argument, env: &Env) -> Env {
+fn pop(dst: &Argument, env: &XEnv) -> XEnv {
     let mut env_c = env.clone();
     let val = value(&Argument::Deref(Register::RSP, 0), &env_c);
     env_c = set(dst, &val, &env_c);
@@ -397,7 +397,7 @@ mod test_xprog {
     fn test_xprog() {
         for (test_prog, expected_res) in get_test_progs() {
             let res = compile_and_run(&test_prog.emit());
-            let interp_env = Env::new(HashMap::new());
+            let interp_env = XEnv::new(HashMap::new());
             let res_env = test_prog.interp(&interp_env);
 
             assert_eq!(res_env.register[&RAX], expected_res);
@@ -432,7 +432,7 @@ mod test_xprog {
     #[test]
     fn test_xprog_interp() {
         for (test_prog, expected_res) in get_test_progs() {
-            let interp_env = Env::new(HashMap::new());
+            let interp_env = XEnv::new(HashMap::new());
             let res_env = test_prog.interp(&interp_env);
 
             assert_eq!(
