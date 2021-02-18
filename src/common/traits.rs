@@ -11,6 +11,13 @@ pub trait InterpMut {
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output;
 }
+
+pub trait Opt {
+    type Env;
+
+    fn opt(&self, env: &Self::Env) -> Self;
+}
+
 pub trait IsPure {
     fn is_pure(&self) -> bool;
 }

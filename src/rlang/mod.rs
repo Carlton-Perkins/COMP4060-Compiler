@@ -8,7 +8,7 @@ pub use rrandp::{randp, RandEnv};
 
 #[allow(dead_code)]
 mod ropt;
-pub use ropt::opt;
+pub use ropt::Opt;
 
 #[allow(dead_code)]
 mod uniquify;

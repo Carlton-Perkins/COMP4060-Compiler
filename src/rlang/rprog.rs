@@ -70,7 +70,7 @@ mod test_rprog {
     use super::*;
 
     fn a_interp(expr: Expr, expect: OType) {
-        let res = expr.clone().interp(&mut REnv::new());
+        let res = expr.interp(&mut REnv::new());
         assert_eq!(
             res, expect,
             "Program {:?} does not eval to {}, but instead {}",
