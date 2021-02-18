@@ -1,5 +1,6 @@
+use crate::common::types::Variable;
+use crate::rlang::Expr;
 use crate::rlang::Expr::*;
-use crate::rlang::{Expr, Variable};
 use rand::prelude::*;
 
 #[derive(Clone)]
@@ -56,7 +57,8 @@ pub fn randp(depth: usize, env: &RandEnv) -> Expr {
 #[cfg(test)]
 mod test_rrandp {
     use super::*;
-    use crate::rlang::{REnv, InterpMut};
+    use crate::common::traits::InterpMut;
+    use crate::rlang::REnv;
 
     #[test]
     #[ignore = "Slow"]

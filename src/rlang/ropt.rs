@@ -1,6 +1,6 @@
-use crate::rlang::{Expr, IsPure, Variable};
-use crate::rlang::Expr::*;
-pub use crate::common::traits::Opt;
+pub use crate::common::{traits::Opt, types::Variable};
+use crate::rlang::Expr;
+use crate::{common::IsPure, rlang::Expr::*};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -76,8 +76,9 @@ impl Opt for Expr {
 #[cfg(test)]
 mod test_ropt {
     use super::*;
+    use crate::common::traits::InterpMut;
     use crate::rlang::rrandp::{randp, RandEnv};
-    use crate::rlang::{InterpMut, REnv};
+    use crate::rlang::REnv;
 
     fn a_opt(e: Expr, expected_opt: Expr, expected_result: i64) {
         println!("{:?}", e);

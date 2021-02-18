@@ -1,10 +1,10 @@
+use crate::common::types::{Number, Variable};
 pub use crate::common::{InterpMut, IsPure};
 use std::collections::HashMap;
 
-pub type Variable = String;
-pub use i64 as OType;
 pub type Program = Expr;
 use Expr::*;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     Num(i64),
@@ -14,9 +14,10 @@ pub enum Expr {
     Let(Variable, Box<Expr>, Box<Expr>),
     Var(Variable),
 }
+
 pub struct REnv {
     read_count: isize,
-    vars: HashMap<Variable, OType>,
+    vars: HashMap<Variable, Number>,
 }
 
 impl REnv {
@@ -43,7 +44,7 @@ impl IsPure for Expr {
 
 impl InterpMut for Expr {
     type Env = REnv;
-    type Output = OType;
+    type Output = Number;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
@@ -69,7 +70,7 @@ impl InterpMut for Expr {
 mod test_rprog {
     use super::*;
 
-    fn a_interp(expr: Expr, expect: OType) {
+    fn a_interp(expr: Expr, expect: Number) {
         let res = expr.interp(&mut REnv::new());
         assert_eq!(
             res, expect,
@@ -78,7 +79,7 @@ mod test_rprog {
         );
     }
 
-    fn a_interp_all(vec: Vec<(Expr, OType)>) {
+    fn a_interp_all(vec: Vec<(Expr, Number)>) {
         for (e, ex) in vec {
             a_interp(e, ex)
         }

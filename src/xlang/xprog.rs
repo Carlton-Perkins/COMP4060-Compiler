@@ -1,21 +1,19 @@
+use crate::common::types::{Address, Label, Number};
 use crate::common::{Emit, Interp};
 use std::collections::HashMap;
 use strum_macros;
 
 const NEWLINE: &str = "\n";
 
-type Var = usize;
-type OType = i64;
-type Label = String;
-type Address = usize;
+type Variable = usize;
 type Block = Vec<Instruction>;
 type Program = HashMap<Label, Block>;
 
 #[derive(Clone)]
 pub struct XEnv {
-    register: HashMap<Register, OType>,
-    variable: HashMap<Var, OType>,
-    memory: HashMap<Address, OType>,
+    register: HashMap<Register, Number>,
+    variable: HashMap<Variable, Number>,
+    memory: HashMap<Address, Number>,
     block: Program,
 }
 
@@ -39,12 +37,12 @@ enum Register {
     R15,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 enum Argument {
-    Con(OType),
+    Con(Number),
     Reg(Register),
-    Deref(Register, OType),
-    Ref(Var),
+    Deref(Register, Number),
+    Ref(Variable),
 }
 
 #[derive(Clone, Debug)]
@@ -195,7 +193,7 @@ impl Interp for Program {
     }
 }
 
-fn set(dst: &Argument, val: &OType, env: &XEnv) -> XEnv {
+fn set(dst: &Argument, val: &Number, env: &XEnv) -> XEnv {
     match dst {
         Argument::Con(con) => panic!("Tried to set to a constant {} -> {:?}", con, dst),
         Argument::Reg(reg) => {
@@ -218,7 +216,7 @@ fn set(dst: &Argument, val: &OType, env: &XEnv) -> XEnv {
     }
 }
 
-fn value(arg: &Argument, env: &XEnv) -> OType {
+fn value(arg: &Argument, env: &XEnv) -> Number {
     match arg {
         Argument::Con(c) => *c,
         Argument::Reg(reg) => *env.register.get(reg).unwrap_or(&0), // Default registers to 0

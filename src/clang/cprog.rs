@@ -1,9 +1,7 @@
+use crate::common::types::{Label, Number, Variable};
 use crate::common::InterpMut;
 use std::collections::HashMap;
 
-type Variable = usize;
-type Number = i64;
-type Label = String;
 type LabelMapping = HashMap<Label, Tail>;
 type Program = LabelMapping;
 
@@ -99,7 +97,7 @@ impl InterpMut for Statement {
         match self {
             Statement::Set(v, ex) => {
                 let val = ex.interp(env);
-                env.var_map.insert(*v, val);
+                env.var_map.insert(v.into(), val);
                 val
             }
         }
@@ -153,7 +151,10 @@ mod test_cprog {
             (
                 vec![(
                     Label::from("main"),
-                    Seq(Set(0, Arg(Num(5))), Box::new(Return(Var(0)))),
+                    Seq(
+                        Set("0".into(), Arg(Num(5))),
+                        Box::new(Return(Var("0".into()))),
+                    ),
                 )]
                 .into_iter()
                 .collect::<Program>(),
@@ -163,14 +164,14 @@ mod test_cprog {
                 vec![(
                     Label::from("main"),
                     Seq(
-                        Set(0, Arg(Num(5))),
+                        Set("0".into(), Arg(Num(5))),
                         Box::new(Seq(
-                            Set(1, Arg(Num(6))),
+                            Set("1".into(), Arg(Num(6))),
                             Box::new(Seq(
-                                Set(2, Add(Var(0), Var(1))),
+                                Set("2".into(), Add(Var("0".into()), Var("1".into()))),
                                 Box::new(Seq(
-                                    Set(3, Add(Var(0), Var(2))),
-                                    Box::new(Return(Var(3))),
+                                    Set("3".into(), Add(Var("0".into()), Var("2".into()))),
+                                    Box::new(Return(Var("3".into()))),
                                 )),
                             )),
                         )),
@@ -184,12 +185,15 @@ mod test_cprog {
                 vec![(
                     Label::from("main"),
                     Seq(
-                        Set(0, Arg(Num(5))),
+                        Set("0".into(), Arg(Num(5))),
                         Box::new(Seq(
-                            Set(1, Arg(Num(6))),
+                            Set("1".into(), Arg(Num(6))),
                             Box::new(Seq(
-                                Set(2, Add(Var(0), Var(1))),
-                                Box::new(Seq(Set(3, Negate(Var(2))), Box::new(Return(Var(3))))),
+                                Set("2".into(), Add(Var("0".into()), Var("1".into()))),
+                                Box::new(Seq(
+                                    Set("3".into(), Negate(Var("2".into()))),
+                                    Box::new(Return(Var("3".into()))),
+                                )),
                             )),
                         )),
                     ),
@@ -202,12 +206,15 @@ mod test_cprog {
                 vec![(
                     Label::from("main"),
                     Seq(
-                        Set(0, Read()),
+                        Set("0".into(), Read()),
                         Box::new(Seq(
-                            Set(1, Read()),
+                            Set("1".into(), Read()),
                             Box::new(Seq(
-                                Set(2, Add(Var(0), Var(1))),
-                                Box::new(Seq(Set(3, Negate(Var(2))), Box::new(Return(Var(3))))),
+                                Set("2".into(), Add(Var("0".into()), Var("1".into()))),
+                                Box::new(Seq(
+                                    Set("3".into(), Negate(Var("2".into()))),
+                                    Box::new(Return(Var("3".into()))),
+                                )),
                             )),
                         )),
                     ),
@@ -235,7 +242,10 @@ mod test_cprog {
         let test_progs: TestPrograms = vec![(
             vec![(
                 Label::from("main"),
-                Seq(Set(0, Arg(Num(5))), Box::new(Return(Var(1)))),
+                Seq(
+                    Set("0".into(), Arg(Num(5))),
+                    Box::new(Return(Var("1".into()))),
+                ),
             )]
             .into_iter()
             .collect::<Program>(),
