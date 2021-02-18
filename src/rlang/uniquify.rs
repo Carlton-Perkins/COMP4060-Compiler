@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::common::types::Variable;
-use crate::rlang::rprog::{Expr, Program};
+use crate::rlang::rprog::{Expr, RProgram};
 
 pub trait Uniquify {
     type Env;
@@ -24,9 +24,9 @@ impl UEnv {
     }
 }
 
-impl Uniquify for Program {
+impl Uniquify for RProgram {
     type Env = UEnv;
-    type Output = Program;
+    type Output = RProgram;
 
     fn uniquify(&self, env: &mut Self::Env) -> Self::Output {
         use Expr::*;
@@ -61,7 +61,7 @@ mod test_uniquify {
     use crate::rlang::{randp, RandEnv};
     use crate::{common::types::Number, rlang::Expr::*};
 
-    type Test = (Program, Program, Number);
+    type Test = (RProgram, RProgram, Number);
     type Tests = Vec<Test>;
 
     fn a_uni((start_program, expected_uni_program, expected_res): Test) {

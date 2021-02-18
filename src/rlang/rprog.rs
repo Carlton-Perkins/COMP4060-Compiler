@@ -2,7 +2,7 @@ use crate::common::types::{Number, Variable};
 pub use crate::common::{InterpMut, IsPure};
 use std::collections::HashMap;
 
-pub type Program = Expr;
+pub type RProgram = Expr;
 use Expr::*;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -70,7 +70,9 @@ impl InterpMut for Expr {
 mod test_rprog {
     use super::*;
 
-    fn a_interp(expr: Expr, expect: Number) {
+    use crate::rlang::rmacros::*;
+
+    fn a_interp(expr: RProgram, expect: Number) {
         let res = expr.interp(&mut REnv::new());
         assert_eq!(
             res, expect,
@@ -79,7 +81,7 @@ mod test_rprog {
         );
     }
 
-    fn a_interp_all(vec: Vec<(Expr, Number)>) {
+    fn a_interp_all(vec: Vec<(RProgram, Number)>) {
         for (e, ex) in vec {
             a_interp(e, ex)
         }
@@ -91,22 +93,29 @@ mod test_rprog {
             (Num(5), 5),
             (Num(-5), -5),
             (Add(Box::new(Num(5)), Box::new(Num(6))), 11),
+            (Add!(Num(5), Num(6)), 11),
             (Add(Box::new(Read), Box::new(Read)), 1),
+            (Add!(Read, Read), 1),
             (Read, 0),
             (Negate(Box::new(Num(5))), -5),
+            (Negate!(Num(5)), -5),
             (
                 Add(Box::new(Num(5)), Box::new(Negate(Box::new(Num(6))))),
                 -1,
             ),
+            (Add!(Num(5), Negate!(Num(6))), -1),
             (Add(Box::new(Read), Box::new(Negate(Box::new(Num(6))))), -6),
+            (Add!(Read, Negate!(Num(6))), -6),
             (
                 Negate(Box::new(Negate(Box::new(Negate(Box::new(Num(6))))))),
                 -6,
             ),
+            (Negate!(Negate!(Negate!(Num(6)))), -6),
             (
                 Negate(Box::new(Negate(Box::new(Negate(Box::new(Num(0))))))),
                 0,
             ),
+            (Negate!(Negate!(Negate!(Num(0)))), 0),
         ];
 
         a_interp_all(tests);
@@ -116,6 +125,7 @@ mod test_rprog {
     fn test_r1() {
         let tests = vec![
             (Let("0".into(), Box::new(Num(0)), Box::new(Read)), 0),
+            (Let!("0", Num(0), Read), 0),
             (
                 Let(
                     "0".into(),
@@ -124,6 +134,7 @@ mod test_rprog {
                 ),
                 1,
             ),
+            (Let!("0", Num(0), Let!("0", Num(1), Var!("0"))), 1),
             (
                 Let(
                     "0".into(),
@@ -137,6 +148,10 @@ mod test_rprog {
                 9,
             ),
             (
+                Let!("0", Num(4), Let!("1", Num(5), Add!(Var!("0"), Var!("1")))),
+                9,
+            ),
+            (
                 Let(
                     "0".into(),
                     Box::new(Read),
@@ -146,6 +161,10 @@ mod test_rprog {
                         Box::new(Add(Box::new(Var("0".into())), Box::new(Var("1".into())))),
                     )),
                 ),
+                1,
+            ),
+            (
+                Let!("0", Read, Let!("1", Read, Add!(Var!("0"), Var!("1")))),
                 1,
             ),
         ];

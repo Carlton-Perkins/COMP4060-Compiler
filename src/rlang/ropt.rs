@@ -1,6 +1,9 @@
-pub use crate::common::{traits::Opt, types::Variable};
+pub use crate::common::traits::Opt;
 use crate::rlang::Expr;
-use crate::{common::IsPure, rlang::Expr::*};
+use crate::{
+    common::{types::Variable, IsPure},
+    rlang::Expr::*,
+};
 use std::collections::HashMap;
 
 #[derive(Clone)]

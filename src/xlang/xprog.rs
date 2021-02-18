@@ -7,14 +7,14 @@ const NEWLINE: &str = "\n";
 
 type Variable = usize;
 type Block = Vec<Instruction>;
-type Program = HashMap<Label, Block>;
+type XProgram = HashMap<Label, Block>;
 
 #[derive(Clone)]
 pub struct XEnv {
     register: HashMap<Register, Number>,
     variable: HashMap<Variable, Number>,
     memory: HashMap<Address, Number>,
-    block: Program,
+    block: XProgram,
 }
 
 #[derive(Debug, strum_macros::ToString, PartialEq, Eq, Hash, Clone, Copy)]
@@ -59,7 +59,7 @@ enum Instruction {
 }
 
 impl XEnv {
-    fn new(prog: Program) -> Self {
+    fn new(prog: XProgram) -> Self {
         XEnv {
             register: HashMap::new(),
             variable: HashMap::new(),
@@ -123,7 +123,7 @@ impl Emit for Block {
     }
 }
 
-impl Emit for Program {
+impl Emit for XProgram {
     fn emit(&self) -> String {
         String::new()
             + ".globl main\n"
@@ -183,7 +183,7 @@ impl Interp for Block {
     }
 }
 
-impl Interp for Program {
+impl Interp for XProgram {
     type Env = XEnv;
     type Output = XEnv;
 
@@ -337,8 +337,8 @@ mod test_xprog {
         assert_eq!(Argument::Deref(Register::RAX, 5).emit(), "%RAX(5)");
     }
 
-    fn get_test_progs() -> Vec<(Program, i64)> {
-        let test_progs: Vec<(Program, i64)> = vec![
+    fn get_test_progs() -> Vec<(XProgram, i64)> {
+        let test_progs: Vec<(XProgram, i64)> = vec![
             (
                 vec![(
                     "main".to_string(),

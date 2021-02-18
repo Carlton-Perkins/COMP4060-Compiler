@@ -3,7 +3,7 @@ use crate::common::InterpMut;
 use std::collections::HashMap;
 
 type LabelMapping = HashMap<Label, Tail>;
-type Program = LabelMapping;
+type CProgram = LabelMapping;
 
 #[derive(Clone)]
 pub struct CEnv {
@@ -38,7 +38,7 @@ enum Tail {
 }
 
 impl CEnv {
-    fn new(prog: &Program) -> Self {
+    fn new(prog: &CProgram) -> Self {
         CEnv {
             read_count: 0,
             block_map: prog.clone(),
@@ -62,7 +62,7 @@ impl InterpMut for Label {
     }
 }
 
-impl InterpMut for Program {
+impl InterpMut for CProgram {
     type Env = CEnv;
     type Output = Number;
 
@@ -143,7 +143,7 @@ mod test_cprog {
     use Tail::*;
 
     type Result = i64;
-    type TestPrograms = Vec<(Program, Result)>;
+    type TestPrograms = Vec<(CProgram, Result)>;
 
     #[test]
     fn test_c0() {
@@ -157,7 +157,7 @@ mod test_cprog {
                     ),
                 )]
                 .into_iter()
-                .collect::<Program>(),
+                .collect::<CProgram>(),
                 5,
             ),
             (
@@ -178,7 +178,7 @@ mod test_cprog {
                     ),
                 )]
                 .into_iter()
-                .collect::<Program>(),
+                .collect::<CProgram>(),
                 16,
             ),
             (
@@ -199,7 +199,7 @@ mod test_cprog {
                     ),
                 )]
                 .into_iter()
-                .collect::<Program>(),
+                .collect::<CProgram>(),
                 -11,
             ),
             (
@@ -220,7 +220,7 @@ mod test_cprog {
                     ),
                 )]
                 .into_iter()
-                .collect::<Program>(),
+                .collect::<CProgram>(),
                 -1,
             ),
         ];
@@ -248,7 +248,7 @@ mod test_cprog {
                 ),
             )]
             .into_iter()
-            .collect::<Program>(),
+            .collect::<CProgram>(),
             5,
         )];
 
