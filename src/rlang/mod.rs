@@ -18,3 +18,6 @@ pub use ropt::Opt;
 #[allow(dead_code)]
 mod uniquify;
 pub use uniquify::Uniquify;
+
+#[allow(dead_code)]
+mod resolve_complex;
