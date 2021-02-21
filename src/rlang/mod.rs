@@ -5,7 +5,7 @@ pub use rmacros::*;
 
 #[allow(dead_code)]
 mod rprog;
-pub use rprog::{Expr, REnv, RProgram};
+pub use rprog::{REnv, RExpr, RProgram};
 
 #[allow(dead_code)]
 mod rrandp;
@@ -22,3 +22,7 @@ pub use uniquify::Uniquify;
 #[allow(dead_code)]
 mod resolve_complex;
 pub use resolve_complex::ResolveComplex;
+
+#[allow(dead_code)]
+mod explicate_control;
+pub use explicate_control::ExplicateControl;

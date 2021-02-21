@@ -1,15 +1,15 @@
 pub use crate::common::traits::Opt;
-use crate::rlang::Expr;
+use crate::rlang::RExpr;
 use crate::{
     common::{types::Variable, IsPure},
-    rlang::Expr::*,
+    rlang::RExpr::*,
 };
 use std::collections::HashMap;
 
 #[derive(Clone)]
 
 pub struct OptEnv {
-    vars: HashMap<Variable, Expr>,
+    vars: HashMap<Variable, RExpr>,
 }
 
 impl OptEnv {
@@ -20,7 +20,7 @@ impl OptEnv {
     }
 }
 
-impl Opt for Expr {
+impl Opt for RExpr {
     type Env = OptEnv;
 
     fn opt(&self, env: &Self::Env) -> Self {
@@ -83,7 +83,7 @@ mod test_ropt {
     use crate::rlang::rrandp::{randp, RandEnv};
     use crate::rlang::REnv;
 
-    fn a_opt(e: Expr, expected_opt: Expr, expected_result: i64) {
+    fn a_opt(e: RExpr, expected_opt: RExpr, expected_result: i64) {
         println!("{:?}", e);
         let e_res = e.interp(&mut REnv::new());
         let opt = e.opt(&OptEnv::new());
@@ -102,7 +102,7 @@ mod test_ropt {
         assert_eq!(e_res, opt_res, "Optimization for {:?} -> {} does not evaluate the same as original expression {:?} -> {} ", opt, opt_res, e, e_res);
     }
 
-    fn a_opt_all(vec: Vec<(Expr, Expr, i64)>) {
+    fn a_opt_all(vec: Vec<(RExpr, RExpr, i64)>) {
         for (e, expect_opt, expect_res) in vec {
             a_opt(e, expect_opt, expect_res)
         }
@@ -178,7 +178,7 @@ mod test_ropt {
     #[test]
     #[ignore = "Slow"]
     fn test_randp_opt() {
-        for depth in 0..20 {
+        for depth in 0..10 {
             for _ in 0..100 {
                 let e = randp(depth, &RandEnv::new());
                 let e_res = e.interp(&mut REnv::new());

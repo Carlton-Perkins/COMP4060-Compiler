@@ -1,6 +1,6 @@
 use crate::common::types::Variable;
-use crate::rlang::Expr;
-use crate::rlang::Expr::*;
+use crate::rlang::RExpr;
+use crate::rlang::RExpr::*;
 use rand::prelude::*;
 
 #[derive(Clone)]
@@ -14,11 +14,11 @@ impl RandEnv {
     }
 }
 
-pub fn randp(depth: usize, env: &RandEnv) -> Expr {
-    type DoType = Box<dyn Fn(usize, &RandEnv) -> Expr>;
-    let do_read = |_: usize, _: &RandEnv| -> Expr { Read };
-    let do_num = |_: usize, _: &RandEnv| -> Expr { Num(random::<i8>() as i64) };
-    let do_var = |_: usize, env: &RandEnv| -> Expr {
+pub fn randp(depth: usize, env: &RandEnv) -> RExpr {
+    type DoType = Box<dyn Fn(usize, &RandEnv) -> RExpr>;
+    let do_read = |_: usize, _: &RandEnv| -> RExpr { Read };
+    let do_num = |_: usize, _: &RandEnv| -> RExpr { Num(random::<i8>() as i64) };
+    let do_var = |_: usize, env: &RandEnv| -> RExpr {
         let mut rng = thread_rng();
         Var((env.vars.choose(&mut rng).unwrap()).to_string())
     };
@@ -27,15 +27,15 @@ pub fn randp(depth: usize, env: &RandEnv) -> Expr {
         do_dzero.push(Box::new(do_var))
     }
 
-    let do_add = |depth: usize, env: &RandEnv| -> Expr {
+    let do_add = |depth: usize, env: &RandEnv| -> RExpr {
         Add(
             Box::new(randp(depth - 1, env)),
             Box::new(randp(depth - 1, env)),
         )
     };
     let do_negate =
-        |depth: usize, env: &RandEnv| -> Expr { Negate(Box::new(randp(depth - 1, env))) };
-    let do_let = |depth: usize, env: &RandEnv| -> Expr {
+        |depth: usize, env: &RandEnv| -> RExpr { Negate(Box::new(randp(depth - 1, env))) };
+    let do_let = |depth: usize, env: &RandEnv| -> RExpr {
         let mut new_env = env.clone();
         let new_var = new_env.vars.len().to_string();
         new_env.vars.push(new_var.clone());
@@ -57,8 +57,12 @@ pub fn randp(depth: usize, env: &RandEnv) -> Expr {
 #[cfg(test)]
 mod test_rrandp {
     use super::*;
-    use crate::common::traits::InterpMut;
     use crate::rlang::REnv;
+    use crate::rlang::ResolveComplex;
+    use crate::{
+        common::traits::InterpMut,
+        rlang::{uniquify::UEnv, Uniquify},
+    };
 
     #[test]
     #[ignore = "Slow"]
@@ -66,7 +70,15 @@ mod test_rrandp {
         for depth in 0..10 {
             for _ in 0..100 {
                 let e = randp(depth, &RandEnv::new());
-                println!("{:?} -> {}", e, e.interp(&mut REnv::new()));
+                let e_ret = e.interp(&mut REnv::new());
+
+                let u = e.uniquify(&mut UEnv::new());
+                let u_ret = u.interp(&mut REnv::new());
+                assert_eq!(e_ret, u_ret);
+
+                let rco = u.resolve_complex();
+                let rco_ret = rco.interp(&mut REnv::new());
+                assert_eq!(e_ret, rco_ret);
             }
         }
     }

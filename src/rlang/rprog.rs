@@ -2,16 +2,16 @@ use crate::common::types::{Number, Variable};
 pub use crate::common::{InterpMut, IsPure};
 use std::collections::HashMap;
 
-pub type RProgram = Expr;
-use Expr::*;
+pub type RProgram = RExpr;
+use RExpr::*;
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Expr {
+pub enum RExpr {
     Num(i64),
     Read,
-    Negate(Box<Expr>),
-    Add(Box<Expr>, Box<Expr>),
-    Let(Variable, Box<Expr>, Box<Expr>),
+    Negate(Box<RExpr>),
+    Add(Box<RExpr>, Box<RExpr>),
+    Let(Variable, Box<RExpr>, Box<RExpr>),
     Var(Variable),
 }
 
@@ -29,7 +29,7 @@ impl REnv {
     }
 }
 
-impl IsPure for Expr {
+impl IsPure for RExpr {
     fn is_pure(&self) -> bool {
         match self {
             Num(_) => true,
@@ -42,7 +42,7 @@ impl IsPure for Expr {
     }
 }
 
-impl InterpMut for Expr {
+impl InterpMut for RExpr {
     type Env = REnv;
     type Output = Number;
 
@@ -173,7 +173,7 @@ mod test_rprog {
         a_interp_all(tests);
     }
 
-    fn two_n(n: usize) -> Expr {
+    fn two_n(n: usize) -> RExpr {
         match n {
             0 => Num(1),
             n => Add(Box::new(two_n(n - 1)), Box::new(two_n(n - 1))),

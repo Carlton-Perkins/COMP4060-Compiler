@@ -2,8 +2,8 @@ use crate::common::types::{Label, Number, Variable};
 use crate::common::InterpMut;
 use std::collections::HashMap;
 
-type LabelMapping = HashMap<Label, Tail>;
-type CProgram = LabelMapping;
+type LabelMapping = HashMap<Label, CTail>;
+pub type CProgram = LabelMapping;
 
 #[derive(Clone)]
 pub struct CEnv {
@@ -13,32 +13,32 @@ pub struct CEnv {
 }
 
 #[derive(Debug, Clone)]
-enum Argument {
+pub enum CArgument {
     Num(Number),
     Var(Variable),
 }
 
 #[derive(Debug, Clone)]
-enum Expresion {
-    Arg(Argument),
+pub enum CExpression {
+    Arg(CArgument),
     Read(),
-    Negate(Argument),
-    Add(Argument, Argument),
+    Negate(CArgument),
+    Add(CArgument, CArgument),
 }
 
 #[derive(Debug, Clone)]
-enum Statement {
-    Set(Variable, Expresion),
+pub enum CStatement {
+    Set(Variable, CExpression),
 }
 
 #[derive(Debug, Clone)]
-enum Tail {
-    Return(Argument),
-    Seq(Statement, Box<Tail>),
+pub enum CTail {
+    Return(CArgument),
+    Seq(CStatement, Box<CTail>),
 }
 
 impl CEnv {
-    fn new(prog: &CProgram) -> Self {
+    pub fn new(prog: &CProgram) -> Self {
         CEnv {
             read_count: 0,
             block_map: prog.clone(),
@@ -74,14 +74,14 @@ impl InterpMut for CProgram {
     }
 }
 
-impl InterpMut for Tail {
+impl InterpMut for CTail {
     type Env = CEnv;
     type Output = Number;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            Tail::Return(ret) => ret.interp(env),
-            Tail::Seq(ex, rest) => {
+            CTail::Return(ret) => ret.interp(env),
+            CTail::Seq(ex, rest) => {
                 ex.interp(env);
                 rest.interp(env)
             }
@@ -89,13 +89,13 @@ impl InterpMut for Tail {
     }
 }
 
-impl InterpMut for Statement {
+impl InterpMut for CStatement {
     type Env = CEnv;
     type Output = Number;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            Statement::Set(v, ex) => {
+            CStatement::Set(v, ex) => {
                 let val = ex.interp(env);
                 env.var_map.insert(v.into(), val);
                 val
@@ -104,32 +104,32 @@ impl InterpMut for Statement {
     }
 }
 
-impl InterpMut for Argument {
+impl InterpMut for CArgument {
     type Env = CEnv;
     type Output = Number;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            Argument::Num(n) => *n,
-            Argument::Var(v) => *env.var_map.get(v).expect("Undefined variable"),
+            CArgument::Num(n) => *n,
+            CArgument::Var(v) => *env.var_map.get(v).expect("Undefined variable"),
         }
     }
 }
 
-impl InterpMut for Expresion {
+impl InterpMut for CExpression {
     type Env = CEnv;
     type Output = Number;
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            Expresion::Arg(a) => a.interp(env),
-            Expresion::Read() => {
+            CExpression::Arg(a) => a.interp(env),
+            CExpression::Read() => {
                 let count = env.read_count;
                 env.read_count += 1;
                 count as Number
             }
-            Expresion::Negate(ex) => -1 * ex.interp(env),
-            Expresion::Add(lh, rh) => lh.interp(env) + rh.interp(env),
+            CExpression::Negate(ex) => -1 * ex.interp(env),
+            CExpression::Add(lh, rh) => lh.interp(env) + rh.interp(env),
         }
     }
 }
@@ -137,13 +137,12 @@ impl InterpMut for Expresion {
 #[cfg(test)]
 mod test_cprog {
     use super::*;
-    use Argument::*;
-    use Expresion::*;
-    use Statement::*;
-    use Tail::*;
+    use CArgument::*;
+    use CExpression::*;
+    use CStatement::*;
+    use CTail::*;
 
-    type Result = i64;
-    type TestPrograms = Vec<(CProgram, Result)>;
+    type TestPrograms = Vec<(CProgram, Number)>;
 
     #[test]
     fn test_c0() {

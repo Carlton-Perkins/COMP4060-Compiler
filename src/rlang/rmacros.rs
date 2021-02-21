@@ -1,34 +1,34 @@
 #[macro_export]
 macro_rules! Negate {
     ($e:expr) => {
-        Negate(Box::new($e))
+        crate::rlang::RExpr::Negate(Box::new($e))
     };
 }
 
 #[macro_export]
 macro_rules! Add {
     ($lh:expr,$rh:expr) => {
-        Add(Box::new($lh), Box::new($rh))
+        crate::rlang::RExpr::Add(Box::new($lh), Box::new($rh))
     };
 }
 
 #[macro_export]
 macro_rules! Let {
     ($v:expr, $ve:expr, $be:expr) => {
-        Let($v.into(), Box::new($ve), Box::new($be))
+        crate::rlang::RExpr::Let($v.into(), Box::new($ve), Box::new($be))
     };
 }
 
 #[macro_export]
 macro_rules! Var {
     ($v:expr) => {
-        Var($v.into())
+        crate::rlang::RExpr::Var($v.into())
     };
 }
 
 #[cfg(test)]
 mod test_rmacros {
-    use crate::rlang::Expr::*;
+    use crate::rlang::RExpr::*;
 
     #[test]
     fn test_rmacros() {

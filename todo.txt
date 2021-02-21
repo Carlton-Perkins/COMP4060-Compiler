@@ -30,7 +30,7 @@ x 2021-02-16 Connect uniquify to your test suite.
 x 2021-02-18 Write a half-dozen tests for resolve-complex that predict its output.
 x 2021-02-21 Implement the resolve-complex pass for R1 programs.
 x 2021-02-21 Connect resolve-complex to your test suite.
-Write a half-dozen tests for explicate-control that predict its output.
+x 2021-02-21 Write a half-dozen tests for explicate-control that predict its output.
 Implement the explicate-control pass for R1 programs.
 Connect explicate-control to your test suite.
 Write a few tests for uncover-locals that predict its output.

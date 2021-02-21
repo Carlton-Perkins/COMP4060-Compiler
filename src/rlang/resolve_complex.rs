@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
-use super::Expr;
-use super::Expr::*;
+use super::RExpr;
+use super::RExpr::*;
 use crate::{common::types::Variable, rlang::RProgram};
 
-type ProgramSeq = Vec<(Variable, Expr)>;
+type ProgramSeq = Vec<(Variable, RExpr)>;
 
 #[derive(Clone)]
 pub struct RCEnv {
     lifts: ProgramSeq,
-    renames: HashMap<Variable, Expr>,
+    renames: HashMap<Variable, RExpr>,
 }
 
 pub trait ResolveComplex {
@@ -67,7 +67,7 @@ impl ResolveComplex for RProgram {
     }
 }
 
-fn recompose_lifts(seq: &ProgramSeq) -> Expr {
+fn recompose_lifts(seq: &ProgramSeq) -> RExpr {
     let split = seq.split_first().unwrap();
 
     match split {
@@ -90,7 +90,7 @@ fn recompose_lifts(seq: &ProgramSeq) -> Expr {
     }
 }
 
-fn lift(expr: &Expr, env: &mut RCEnv) -> Expr {
+fn lift(expr: &RExpr, env: &mut RCEnv) -> RExpr {
     let nv: Variable = format!("r{}", env.lifts.len());
     env.lifts.push((nv.clone(), expr.clone()));
     Var(nv)
