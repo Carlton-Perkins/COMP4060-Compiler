@@ -21,3 +21,4 @@ pub use uniquify::Uniquify;
 
 #[allow(dead_code)]
 mod resolve_complex;
+pub use resolve_complex::ResolveComplex;

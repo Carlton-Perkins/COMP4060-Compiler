@@ -61,7 +61,10 @@ impl InterpMut for Expr {
                 env.vars.insert(v.clone(), value);
                 be.interp(env)
             }
-            Var(n) => env.vars[n],
+            Var(n) => *env
+                .vars
+                .get(n)
+                .expect(format!("RInterp: Unbound variable {:?}", n).as_str()),
         }
     }
 }
@@ -69,8 +72,6 @@ impl InterpMut for Expr {
 #[cfg(test)]
 mod test_rprog {
     use super::*;
-
-    use crate::rlang::rmacros::*;
 
     fn a_interp(expr: RProgram, expect: Number) {
         let res = expr.interp(&mut REnv::new());

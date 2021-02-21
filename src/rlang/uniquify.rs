@@ -16,7 +16,7 @@ pub struct UEnv {
 }
 
 impl UEnv {
-    fn new() -> Self {
+    pub fn new() -> Self {
         UEnv {
             var_counter: 0,
             var_map: HashMap::new(),
