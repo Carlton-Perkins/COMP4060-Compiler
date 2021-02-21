@@ -13,16 +13,16 @@ pub use rrandp::{randp, RandEnv};
 
 #[allow(dead_code)]
 mod ropt;
-pub use ropt::Opt;
+pub use ropt::{Opt, OptEnv};
 
 #[allow(dead_code)]
 mod uniquify;
-pub use uniquify::Uniquify;
+pub use uniquify::{UEnv, Uniquify};
 
 #[allow(dead_code)]
 mod resolve_complex;
-pub use resolve_complex::ResolveComplex;
+pub use resolve_complex::{RCEnv, ResolveComplex};
 
 #[allow(dead_code)]
 mod explicate_control;
-pub use explicate_control::ExplicateControl;
+pub use explicate_control::{ECEnv, ExplicateControl};

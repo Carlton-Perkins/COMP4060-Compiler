@@ -57,8 +57,10 @@ pub fn randp(depth: usize, env: &RandEnv) -> RExpr {
 #[cfg(test)]
 mod test_rrandp {
     use super::*;
+    use crate::clang::CEnv;
     use crate::rlang::REnv;
     use crate::rlang::ResolveComplex;
+    use crate::rlang::{ECEnv, ExplicateControl};
     use crate::{
         common::traits::InterpMut,
         rlang::{uniquify::UEnv, Uniquify},
@@ -79,6 +81,10 @@ mod test_rrandp {
                 let rco = u.resolve_complex();
                 let rco_ret = rco.interp(&mut REnv::new());
                 assert_eq!(e_ret, rco_ret);
+
+                let econ = rco.explicate_control(ECEnv::new());
+                let econ_ret = econ.interp(&mut CEnv::new(&econ));
+                assert_eq!(e_ret, econ_ret);
             }
         }
     }

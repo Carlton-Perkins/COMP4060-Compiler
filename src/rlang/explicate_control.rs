@@ -5,7 +5,7 @@ use crate::rlang::{RExpr, RProgram};
 pub struct ECEnv {}
 
 impl ECEnv {
-    fn new() -> Self {
+    pub fn new() -> Self {
         ECEnv {}
     }
 }
@@ -15,7 +15,7 @@ pub trait ExplicateControl {
 }
 
 impl ExplicateControl for RProgram {
-    fn explicate_control(&self, env: ECEnv) -> CProgram {
+    fn explicate_control(&self, _: ECEnv) -> CProgram {
         vec![(Label::from("main"), econ_t(self))]
             .into_iter()
             .collect()
