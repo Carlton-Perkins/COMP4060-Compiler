@@ -1,5 +1,5 @@
+pub use crate::common::traits::{InterpMut, IsPure};
 use crate::common::types::{Number, Variable};
-pub use crate::common::{InterpMut, IsPure};
 use std::collections::HashMap;
 
 pub type RProgram = RExpr;

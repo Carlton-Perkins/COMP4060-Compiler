@@ -1,5 +1,7 @@
-use crate::common::types::{Label, Number, Variable};
-use crate::common::InterpMut;
+use crate::common::{
+    traits::InterpMut,
+    types::{Label, Number, Variable},
+};
 use std::collections::HashMap;
 
 type LabelMapping = HashMap<Label, CTail>;

@@ -1,5 +1,7 @@
-use crate::common::types::{Address, Label, Number};
-use crate::common::{Emit, Interp};
+use crate::common::{
+    traits::{Emit, Interp},
+    types::{Address, Label, Number},
+};
 use std::collections::HashMap;
 use strum_macros;
 

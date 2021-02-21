@@ -1,8 +1,9 @@
-use std::collections::HashMap;
-
-use super::RExpr;
 use super::RExpr::*;
-use crate::{common::types::Variable, rlang::RProgram};
+use crate::{
+    common::types::Variable,
+    rlang::{RExpr, RProgram},
+};
+use std::collections::HashMap;
 
 type ProgramSeq = Vec<(Variable, RExpr)>;
 
@@ -99,9 +100,10 @@ fn lift(expr: &RExpr, env: &mut RCEnv) -> RExpr {
 #[cfg(test)]
 mod test_rco {
     use super::*;
-    use crate::common::{traits::InterpMut, types::Number};
-    use crate::rlang::uniquify::{UEnv, Uniquify};
-    use crate::rlang::REnv;
+    use crate::{
+        common::{traits::InterpMut, types::Number},
+        rlang::{REnv, UEnv, Uniquify},
+    };
 
     type Test = (RProgram, RProgram, Number);
     type Tests = Vec<Test>;

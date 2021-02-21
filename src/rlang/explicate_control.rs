@@ -1,6 +1,8 @@
-use crate::clang::{CArgument, CExpression, CProgram, CStatement, CTail};
-use crate::common::types::Label;
-use crate::rlang::{RExpr, RProgram};
+use crate::{
+    clang::{CArgument, CExpression, CProgram, CStatement, CTail},
+    common::types::Label,
+    rlang::{RExpr, RProgram},
+};
 
 pub struct ECEnv {}
 
@@ -50,12 +52,13 @@ fn econ_t(tail: &RExpr) -> CTail {
 
 #[cfg(test)]
 mod test_econ {
-    use crate::clang::CEnv;
-    use crate::common::types::Number;
-    use crate::common::InterpMut;
-    use crate::rlang::REnv;
 
     use super::*;
+    use crate::{
+        clang::CEnv,
+        common::{traits::InterpMut, types::Number},
+        rlang::REnv,
+    };
 
     // Where RProgram is RCO'ed style
     type Test = (RProgram, Number);

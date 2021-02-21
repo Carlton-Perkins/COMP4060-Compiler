@@ -1,6 +1,7 @@
-use crate::common::types::Variable;
-use crate::rlang::RExpr;
-use crate::rlang::RExpr::*;
+use crate::{
+    common::types::Variable,
+    rlang::{RExpr, RExpr::*},
+};
 use rand::prelude::*;
 
 #[derive(Clone)]
@@ -57,13 +58,10 @@ pub fn randp(depth: usize, env: &RandEnv) -> RExpr {
 #[cfg(test)]
 mod test_rrandp {
     use super::*;
-    use crate::clang::CEnv;
-    use crate::rlang::REnv;
-    use crate::rlang::ResolveComplex;
-    use crate::rlang::{ECEnv, ExplicateControl};
     use crate::{
+        clang::CEnv,
         common::traits::InterpMut,
-        rlang::{uniquify::UEnv, Uniquify},
+        rlang::{ECEnv, ExplicateControl, REnv, ResolveComplex, UEnv, Uniquify},
     };
 
     #[test]

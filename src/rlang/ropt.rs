@@ -1,7 +1,7 @@
 pub use crate::common::traits::Opt;
-use crate::rlang::RExpr;
 use crate::{
-    common::{types::Variable, IsPure},
+    common::{traits::IsPure, types::Variable},
+    rlang::RExpr,
     rlang::RExpr::*,
 };
 use std::collections::HashMap;
@@ -79,9 +79,10 @@ impl Opt for RExpr {
 #[cfg(test)]
 mod test_ropt {
     use super::*;
-    use crate::common::traits::InterpMut;
-    use crate::rlang::rrandp::{randp, RandEnv};
-    use crate::rlang::REnv;
+    use crate::{
+        common::traits::InterpMut,
+        rlang::{randp, REnv, RandEnv},
+    };
 
     fn a_opt(e: RExpr, expected_opt: RExpr, expected_result: i64) {
         println!("{:?}", e);
