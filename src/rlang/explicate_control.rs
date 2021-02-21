@@ -16,7 +16,35 @@ pub trait ExplicateControl {
 
 impl ExplicateControl for RProgram {
     fn explicate_control(&self, env: ECEnv) -> CProgram {
-        todo!()
+        vec![(Label::from("main"), econ_t(self))]
+            .into_iter()
+            .collect()
+    }
+}
+
+fn econ_e(expr: &RExpr) -> CExpression {
+    match expr {
+        RExpr::Read => CExpression::Read(),
+        RExpr::Negate(e) => CExpression::Negate(econ_a(e)),
+        RExpr::Add(lh, rh) => CExpression::Add(econ_a(lh), econ_a(rh)),
+        e => CExpression::Arg(econ_a(e)),
+    }
+}
+
+fn econ_a(arg: &RExpr) -> CArgument {
+    match arg {
+        RExpr::Num(n) => CArgument::Num(*n),
+        RExpr::Var(v) => CArgument::Var(v.clone()),
+        _ => panic!("Econ: Invalid structure {:?}", arg),
+    }
+}
+
+fn econ_t(tail: &RExpr) -> CTail {
+    match tail {
+        RExpr::Let(v, ve, be) => {
+            CTail::Seq(CStatement::Set(v.clone(), econ_e(ve)), Box::new(econ_t(be)))
+        }
+        e => CTail::Return(econ_a(e)),
     }
 }
 
