@@ -177,7 +177,6 @@ mod test_ropt {
     }
 
     #[test]
-    #[ignore = "Slow"]
     fn test_randp_opt() {
         for depth in 0..10 {
             for _ in 0..100 {

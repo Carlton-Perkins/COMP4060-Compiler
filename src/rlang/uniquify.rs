@@ -149,7 +149,6 @@ mod test_uniquify {
     }
 
     #[test]
-    #[ignore = "Slow"]
     fn test_uniquify_randp() {
         for depth in 0..10 {
             for _ in 0..100 {

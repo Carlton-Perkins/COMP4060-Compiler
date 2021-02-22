@@ -65,7 +65,6 @@ mod test_rrandp {
     };
 
     #[test]
-    #[ignore = "Slow"]
     fn test_randp() {
         for depth in 0..10 {
             for _ in 0..100 {
