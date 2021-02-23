@@ -1,6 +1,5 @@
 use crate::{
     clang::{CArgument, CExpression, CProgram, CStatement, CTail},
-    common::types::Label,
     rlang::{RExpr, RProgram},
 };
 
@@ -18,9 +17,7 @@ pub trait ExplicateControl {
 
 impl ExplicateControl for RProgram {
     fn explicate_control(&self, _: ECEnv) -> CProgram {
-        vec![(Label::from("main"), econ_t(self))]
-            .into_iter()
-            .collect()
+        vec![(Label!("main"), econ_t(self))].into_iter().collect()
     }
 }
 

@@ -191,7 +191,7 @@ impl Interp for XProgram {
 
     fn interp(&self, _: &Self::Env) -> Self::Output {
         let env = Self::Env::new(self.clone());
-        Label::from("main").interp(&env)
+        Label!("main").interp(&env)
     }
 }
 

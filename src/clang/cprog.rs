@@ -4,13 +4,13 @@ use crate::common::{
 };
 use std::collections::HashMap;
 
-type LabelMapping = HashMap<Label, CTail>;
-pub type CProgram = LabelMapping;
+type CLabelMapping = HashMap<Label, CTail>;
+pub type CProgram = CLabelMapping;
 
 #[derive(Clone)]
 pub struct CEnv {
     read_count: usize,
-    block_map: LabelMapping,
+    block_map: CLabelMapping,
     var_map: HashMap<Variable, Number>,
 }
 
@@ -68,11 +68,8 @@ impl InterpMut for CProgram {
     type Env = CEnv;
     type Output = Number;
 
-    fn interp(&self, _: &mut Self::Env) -> Self::Output {
-        let mut env = Self::Env::new(self);
-        let entry_point = Label::from("main");
-
-        entry_point.interp(&mut env)
+    fn interp(&self, mut env: &mut Self::Env) -> Self::Output {
+        Label!("main").interp(&mut env)
     }
 }
 
@@ -151,7 +148,7 @@ mod test_cprog {
         let test_progs: TestPrograms = vec![
             (
                 vec![(
-                    Label::from("main"),
+                    Label!("main"),
                     Seq(
                         Set("0".into(), Arg(Num(5))),
                         Box::new(Return(Var("0".into()))),
@@ -163,7 +160,7 @@ mod test_cprog {
             ),
             (
                 vec![(
-                    Label::from("main"),
+                    Label!("main"),
                     Seq(
                         Set("0".into(), Arg(Num(5))),
                         Box::new(Seq(
@@ -184,7 +181,7 @@ mod test_cprog {
             ),
             (
                 vec![(
-                    Label::from("main"),
+                    Label!("main"),
                     Seq(
                         Set("0".into(), Arg(Num(5))),
                         Box::new(Seq(
@@ -205,7 +202,7 @@ mod test_cprog {
             ),
             (
                 vec![(
-                    Label::from("main"),
+                    Label!("main"),
                     Seq(
                         Set("0".into(), Read()),
                         Box::new(Seq(
@@ -242,7 +239,7 @@ mod test_cprog {
     fn test_c0_undefined_variable() {
         let test_progs: TestPrograms = vec![(
             vec![(
-                Label::from("main"),
+                Label!("main"),
                 Seq(
                     Set("0".into(), Arg(Num(5))),
                     Box::new(Return(Var("1".into()))),
