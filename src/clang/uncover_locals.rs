@@ -1,7 +1,8 @@
 use std::collections::HashSet;
+use std::iter::FromIterator;
 
 use crate::{
-    clang::{CArgument, CEnv, CExpression, CProgram, CStatement, CTail},
+    clang::{CArgument, CExpression, CProgram, CStatement, CTail},
     common::types::Variable,
 };
 
@@ -12,9 +13,64 @@ pub trait UncoverLocals {
     fn uncover_locals(&self) -> CProgramInfo;
 }
 
+trait LocateVars {
+    fn locate_vars(&self) -> LocalsInfo;
+}
+
 impl UncoverLocals for CProgram {
     fn uncover_locals(&self) -> CProgramInfo {
-        unimplemented!()
+        let locals = self
+            .get(&Label!("main").clone())
+            .expect(format!("No main label in program {:?}", self).as_str());
+        (self.clone(), locals.locate_vars())
+    }
+}
+
+impl LocateVars for CTail {
+    fn locate_vars(&self) -> LocalsInfo {
+        match self {
+            CTail::Return(e) => e.locate_vars(),
+            CTail::Seq(e, tail) => e
+                .locate_vars()
+                .union(&tail.locate_vars())
+                .map(|x| x.clone())
+                .collect(),
+        }
+    }
+}
+
+impl LocateVars for CArgument {
+    fn locate_vars(&self) -> LocalsInfo {
+        match self {
+            CArgument::Num(_) => LocalsInfo::new(),
+            CArgument::Var(var) => LocalsInfo::from_iter(vec![var.clone()]),
+        }
+    }
+}
+
+impl LocateVars for CStatement {
+    fn locate_vars(&self) -> LocalsInfo {
+        match self {
+            CStatement::Set(var, ex) => LocalsInfo::from_iter(vec![var.clone()])
+                .union(&ex.locate_vars())
+                .map(|x| x.clone())
+                .collect(),
+        }
+    }
+}
+
+impl LocateVars for CExpression {
+    fn locate_vars(&self) -> LocalsInfo {
+        match self {
+            CExpression::Arg(e) => e.locate_vars(),
+            CExpression::Read() => LocalsInfo::new(),
+            CExpression::Negate(e) => e.locate_vars(),
+            CExpression::Add(lh, rh) => lh
+                .locate_vars()
+                .union(&rh.locate_vars())
+                .map(|x| x.clone())
+                .collect(),
+        }
     }
 }
 
