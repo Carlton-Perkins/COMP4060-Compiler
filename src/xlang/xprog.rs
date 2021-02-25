@@ -1,26 +1,25 @@
 use crate::common::{
     traits::{Emit, Interp},
-    types::{Address, Label, Number},
+    types::{Address, Label, Number, Variable},
 };
 use std::collections::HashMap;
 use strum_macros;
 
 const NEWLINE: &str = "\n";
 
-type Variable = usize;
-type Block = Vec<Instruction>;
-type XProgram = HashMap<Label, Block>;
+pub type XBlock = Vec<XInstruction>;
+pub type XProgram = HashMap<Label, XBlock>;
 
 #[derive(Clone)]
 pub struct XEnv {
-    register: HashMap<Register, Number>,
-    variable: HashMap<Variable, Number>,
+    register: HashMap<XRegister, Number>,
+    variable: HashMap<Variable, Address>,
     memory: HashMap<Address, Number>,
     block: XProgram,
 }
 
 #[derive(Debug, strum_macros::ToString, PartialEq, Eq, Hash, Clone, Copy)]
-enum Register {
+pub enum XRegister {
     RSP,
     RBP,
     RAX,
@@ -39,29 +38,29 @@ enum Register {
     R15,
 }
 
-#[derive(Clone, Debug)]
-enum Argument {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum XArgument {
     Con(Number),
-    Reg(Register),
-    Deref(Register, Number),
-    Ref(Variable),
+    Reg(XRegister),
+    Deref(XRegister, Number),
+    Var(Variable),
 }
 
-#[derive(Clone, Debug)]
-enum Instruction {
-    Addq(Argument, Argument),
-    Subq(Argument, Argument),
-    Movq(Argument, Argument),
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum XInstruction {
+    Addq(XArgument, XArgument),
+    Subq(XArgument, XArgument),
+    Movq(XArgument, XArgument),
     Retq,
-    Negq(Argument),
+    Negq(XArgument),
     Callq(Label),
     Jmp(Label),
-    Pushq(Argument),
-    Popq(Argument),
+    Pushq(XArgument),
+    Popq(XArgument),
 }
 
 impl XEnv {
-    fn new(prog: XProgram) -> Self {
+    pub fn new(prog: XProgram) -> Self {
         XEnv {
             register: HashMap::new(),
             variable: HashMap::new(),
@@ -71,7 +70,7 @@ impl XEnv {
     }
 }
 
-impl Emit for Register {
+impl Emit for XRegister {
     fn emit(&self) -> String {
         format!("%{}", self.to_string())
     }
@@ -83,18 +82,18 @@ impl Emit for Label {
     }
 }
 
-impl Emit for Argument {
+impl Emit for XArgument {
     fn emit(&self) -> String {
         match self {
-            Argument::Con(n) => format!("${}", n),
-            Argument::Reg(r) => r.emit(),
-            Argument::Deref(r, n) => format!("{}({})", r.emit(), n),
-            Argument::Ref(v) => format!("{}", v),
+            XArgument::Con(n) => format!("${}", n),
+            XArgument::Reg(r) => r.emit(),
+            XArgument::Deref(r, n) => format!("{}({})", r.emit(), n),
+            XArgument::Var(v) => format!("!{}!", v),
         }
     }
 }
 
-impl Emit for Instruction {
+impl Emit for XInstruction {
     fn emit(&self) -> String {
         fn binary(instr: &str, a1: &dyn Emit, a2: &dyn Emit) -> String {
             format!("{} {}, {}", instr, a1.emit(), a2.emit())
@@ -104,20 +103,20 @@ impl Emit for Instruction {
         };
 
         match self {
-            Instruction::Addq(src, dst) => binary("addq", src, dst),
-            Instruction::Subq(src, dst) => binary("subq", src, dst),
-            Instruction::Movq(src, dst) => binary("movq", src, dst),
-            Instruction::Retq => "ret".to_string(),
-            Instruction::Negq(n) => unary("negq", n),
-            Instruction::Callq(dst) => unary("callq", dst),
-            Instruction::Jmp(dst) => unary("jmp", dst),
-            Instruction::Pushq(src) => unary("pushq", src),
-            Instruction::Popq(dst) => unary("popq", dst),
+            XInstruction::Addq(src, dst) => binary("addq", src, dst),
+            XInstruction::Subq(src, dst) => binary("subq", src, dst),
+            XInstruction::Movq(src, dst) => binary("movq", src, dst),
+            XInstruction::Retq => "ret".to_string(),
+            XInstruction::Negq(n) => unary("negq", n),
+            XInstruction::Callq(dst) => unary("callq", dst),
+            XInstruction::Jmp(dst) => unary("jmp", dst),
+            XInstruction::Pushq(src) => unary("pushq", src),
+            XInstruction::Popq(dst) => unary("popq", dst),
         }
     }
 }
 
-impl Emit for Block {
+impl Emit for XBlock {
     fn emit(&self) -> String {
         self.into_iter()
             .map(|x| x.emit() + NEWLINE)
@@ -150,26 +149,26 @@ impl Interp for Label {
     }
 }
 
-impl Interp for Instruction {
+impl Interp for XInstruction {
     type Env = XEnv;
     type Output = XEnv;
 
     fn interp(&self, env: &Self::Env) -> Self::Output {
         match self {
-            Instruction::Addq(src, dst) => set(dst, &(value(src, env) + value(dst, env)), env),
-            Instruction::Subq(src, dst) => set(dst, &(value(src, env) - value(dst, env)), env),
-            Instruction::Movq(src, dst) => set(dst, &value(src, env), env),
-            Instruction::Retq => env.clone(),
-            Instruction::Negq(v) => set(v, &value(v, env), env),
-            Instruction::Callq(l) => l.interp(env),
-            Instruction::Jmp(l) => l.interp(env),
-            Instruction::Pushq(src) => push(src, env),
-            Instruction::Popq(dst) => pop(dst, env),
+            XInstruction::Addq(src, dst) => set(dst, &(value(src, env) + value(dst, env)), env),
+            XInstruction::Subq(src, dst) => set(dst, &(value(src, env) - value(dst, env)), env),
+            XInstruction::Movq(src, dst) => set(dst, &value(src, env), env),
+            XInstruction::Retq => env.clone(),
+            XInstruction::Negq(v) => set(v, &value(v, env), env),
+            XInstruction::Callq(l) => l.interp(env),
+            XInstruction::Jmp(l) => l.interp(env),
+            XInstruction::Pushq(src) => push(src, env),
+            XInstruction::Popq(dst) => pop(dst, env),
         }
     }
 }
 
-impl Interp for Block {
+impl Interp for XBlock {
     type Env = XEnv;
     type Output = XEnv;
 
@@ -178,7 +177,7 @@ impl Interp for Block {
             Some((first, rest)) => rest
                 .into_iter()
                 .map(|x| x.clone())
-                .collect::<Block>()
+                .collect::<XBlock>()
                 .interp(&first.interp(&env)),
             None => env.clone(),
         }
@@ -187,70 +186,72 @@ impl Interp for Block {
 
 impl Interp for XProgram {
     type Env = XEnv;
-    type Output = XEnv;
+    type Output = Number;
 
     fn interp(&self, _: &Self::Env) -> Self::Output {
         let env = Self::Env::new(self.clone());
-        Label!("main").interp(&env)
+        let ret_env = Label!("main").interp(&env);
+        value(&XArgument::Reg(XRegister::RAX), &ret_env)
     }
 }
 
-fn set(dst: &Argument, val: &Number, env: &XEnv) -> XEnv {
+fn set(dst: &XArgument, val: &Number, env: &XEnv) -> XEnv {
     match dst {
-        Argument::Con(con) => panic!("Tried to set to a constant {} -> {:?}", con, dst),
-        Argument::Reg(reg) => {
+        XArgument::Con(con) => panic!("Tried to set to a constant {} -> {:?}", con, dst),
+        XArgument::Reg(reg) => {
             let mut env_c = env.clone();
             env_c.register.insert(*reg, *val);
             env_c
         }
-        Argument::Deref(reg, offset) => {
+        XArgument::Deref(reg, offset) => {
             let mut env_c = env.clone();
             let reg_val = env_c.register.get(reg).unwrap_or(&0); // Default registers to 0
             let target = reg_val + offset;
             env_c.memory.insert(target as usize, *val);
             env_c
         }
-        Argument::Ref(var) => {
+        XArgument::Var(var) => {
             let mut env_c = env.clone();
-            env_c.memory.insert(*var, *val);
+            let var_loc = env_c.variable.get(var).unwrap();
+            env_c.memory.insert(*var_loc, *val);
             env_c
         }
     }
 }
 
-fn value(arg: &Argument, env: &XEnv) -> Number {
+fn value(arg: &XArgument, env: &XEnv) -> Number {
     match arg {
-        Argument::Con(c) => *c,
-        Argument::Reg(reg) => *env.register.get(reg).unwrap_or(&0), // Default registers to 0
-        Argument::Deref(reg, offset) => {
+        XArgument::Con(c) => *c,
+        XArgument::Reg(reg) => *env.register.get(reg).unwrap_or(&0), // Default registers to 0
+        XArgument::Deref(reg, offset) => {
             let reg_val = env.register.get(reg).unwrap_or(&0); // Default registers to 0
             let target = reg_val + offset;
             *env.memory.get(&(target as usize)).unwrap_or(&0) // Defaults memory to 0
         }
-        Argument::Ref(var) => {
-            *env.variable.get(var).unwrap_or(&0) // Default variables to 0
+        XArgument::Var(var) => {
+            *env.variable.get(var).unwrap_or(&0) as Number // Default variables to 0
         }
     }
 }
 
-fn push(src: &Argument, env: &XEnv) -> XEnv {
+fn push(src: &XArgument, env: &XEnv) -> XEnv {
     let mut env_c = env.clone();
     let val = value(src, &env_c);
     env_c = set(
-        &Argument::Reg(Register::RSP),
-        &(value(&Argument::Deref(Register::RSP, 0), &env_c) - 8),
+        &XArgument::Reg(XRegister::RSP),
+        &(value(&XArgument::Deref(XRegister::RSP, 0), &env_c) - 8),
         &env_c,
     );
-    set(&Argument::Deref(Register::RSP, 0), &val, &env_c)
+    set(&XArgument::Deref(XRegister::RSP, 0), &val, &env_c)
 }
 
-fn pop(dst: &Argument, env: &XEnv) -> XEnv {
+fn pop(dst: &XArgument, env: &XEnv) -> XEnv {
     let mut env_c = env.clone();
-    let val = value(&Argument::Deref(Register::RSP, 0), &env_c);
+    let val = value(&XArgument::Deref(XRegister::RSP, 0), &env_c);
     env_c = set(dst, &val, &env_c);
     set(
-        &Argument::Reg(Register::RSP),
-        &(value(&Argument::Reg(Register::RSP), &env_c) + 8),
+        &XArgument::Reg(XRegister::RSP),
+        &(value(&XArgument::Reg(XRegister::RSP), &env_c) + 8),
         &env_c,
     )
 }
@@ -267,9 +268,9 @@ mod test_xprog {
 
     use tempfile::tempdir;
 
-    use super::Argument::*;
-    use super::Instruction::*;
-    use super::Register::*;
+    use super::XArgument::*;
+    use super::XInstruction::*;
+    use super::XRegister::*;
     use super::*;
 
     fn compile_and_run(prog: &String) -> Result<i32, String> {
@@ -333,10 +334,10 @@ mod test_xprog {
 
     #[test]
     fn test_emit() {
-        assert_eq!(Register::R10.emit(), "%R10");
-        assert_eq!(Argument::Con(5).emit(), "$5");
-        assert_eq!(Argument::Reg(Register::RAX).emit(), "%RAX");
-        assert_eq!(Argument::Deref(Register::RAX, 5).emit(), "%RAX(5)");
+        assert_eq!(XRegister::R10.emit(), "%R10");
+        assert_eq!(XArgument::Con(5).emit(), "$5");
+        assert_eq!(XArgument::Reg(XRegister::RAX).emit(), "%RAX");
+        assert_eq!(XArgument::Deref(XRegister::RAX, 5).emit(), "%RAX(5)");
     }
 
     fn get_test_progs() -> Vec<(XProgram, i64)> {
@@ -396,13 +397,13 @@ mod test_xprog {
     #[test]
     fn test_xprog() {
         for (test_prog, expected_res) in get_test_progs() {
-            let res = compile_and_run(&test_prog.emit());
+            let c_res = compile_and_run(&test_prog.emit());
             let interp_env = XEnv::new(HashMap::new());
-            let res_env = test_prog.interp(&interp_env);
+            let i_res = test_prog.interp(&interp_env);
 
-            assert_eq!(res_env.register[&RAX], expected_res);
+            assert_eq!(i_res, expected_res);
 
-            match res {
+            match c_res {
                 Ok(n) => {
                     assert_eq!(
                         n as i64,
@@ -433,15 +434,12 @@ mod test_xprog {
     fn test_xprog_interp() {
         for (test_prog, expected_res) in get_test_progs() {
             let interp_env = XEnv::new(HashMap::new());
-            let res_env = test_prog.interp(&interp_env);
+            let res = test_prog.interp(&interp_env);
 
             assert_eq!(
-                value(&Reg(RAX), &res_env),
-                expected_res,
+                res, expected_res,
                 "Program returned {}, when it should have returned {}: {:?}",
-                value(&Reg(RAX), &res_env),
-                expected_res,
-                test_prog
+                res, expected_res, test_prog
             );
         }
     }

@@ -7,12 +7,12 @@ use RExpr::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum RExpr {
-    Num(i64),
-    Read,
-    Negate(Box<RExpr>),
-    Add(Box<RExpr>, Box<RExpr>),
-    Let(Variable, Box<RExpr>, Box<RExpr>),
-    Var(Variable),
+    RNum(i64),
+    RRead,
+    RNegate(Box<RExpr>),
+    RAdd(Box<RExpr>, Box<RExpr>),
+    RLet(Variable, Box<RExpr>, Box<RExpr>),
+    RVar(Variable),
 }
 
 pub struct REnv {
@@ -32,12 +32,12 @@ impl REnv {
 impl IsPure for RExpr {
     fn is_pure(&self) -> bool {
         match self {
-            Num(_) => true,
-            Read => false,
-            Negate(ex) => ex.is_pure(),
-            Add(lh, rh) => lh.is_pure() && rh.is_pure(),
-            Let(_, ve, be) => ve.is_pure() && be.is_pure(),
-            Var(_) => true,
+            RNum(_) => true,
+            RRead => false,
+            RNegate(ex) => ex.is_pure(),
+            RAdd(lh, rh) => lh.is_pure() && rh.is_pure(),
+            RLet(_, ve, be) => ve.is_pure() && be.is_pure(),
+            RVar(_) => true,
         }
     }
 }
@@ -48,20 +48,20 @@ impl InterpMut for RExpr {
 
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            Num(n) => *n,
-            Read => {
+            RNum(n) => *n,
+            RRead => {
                 let res = env.read_count as i64;
                 env.read_count += 1;
                 res
             }
-            Negate(ex) => -1 * ex.interp(env),
-            Add(lh, rh) => lh.interp(env) + rh.interp(env),
-            Let(v, ve, be) => {
+            RNegate(ex) => -1 * ex.interp(env),
+            RAdd(lh, rh) => lh.interp(env) + rh.interp(env),
+            RLet(v, ve, be) => {
                 let value = ve.interp(env);
                 env.vars.insert(v.clone(), value);
                 be.interp(env)
             }
-            Var(n) => *env
+            RVar(n) => *env
                 .vars
                 .get(n)
                 .expect(format!("RInterp: Unbound variable {:?}", n).as_str()),
@@ -91,32 +91,35 @@ mod test_rprog {
     #[test]
     fn test_r0() {
         let tests = vec![
-            (Num(5), 5),
-            (Num(-5), -5),
-            (Add(Box::new(Num(5)), Box::new(Num(6))), 11),
-            (Add!(Num(5), Num(6)), 11),
-            (Add(Box::new(Read), Box::new(Read)), 1),
-            (Add!(Read, Read), 1),
-            (Read, 0),
-            (Negate(Box::new(Num(5))), -5),
-            (Negate!(Num(5)), -5),
+            (RNum(5), 5),
+            (RNum(-5), -5),
+            (RAdd(Box::new(RNum(5)), Box::new(RNum(6))), 11),
+            (RAdd!(RNum(5), RNum(6)), 11),
+            (RAdd(Box::new(RRead), Box::new(RRead)), 1),
+            (RAdd!(RRead, RRead), 1),
+            (RRead, 0),
+            (RNegate(Box::new(RNum(5))), -5),
+            (RNegate!(RNum(5)), -5),
             (
-                Add(Box::new(Num(5)), Box::new(Negate(Box::new(Num(6))))),
+                RAdd(Box::new(RNum(5)), Box::new(RNegate(Box::new(RNum(6))))),
                 -1,
             ),
-            (Add!(Num(5), Negate!(Num(6))), -1),
-            (Add(Box::new(Read), Box::new(Negate(Box::new(Num(6))))), -6),
-            (Add!(Read, Negate!(Num(6))), -6),
+            (RAdd!(RNum(5), RNegate!(RNum(6))), -1),
             (
-                Negate(Box::new(Negate(Box::new(Negate(Box::new(Num(6))))))),
+                RAdd(Box::new(RRead), Box::new(RNegate(Box::new(RNum(6))))),
                 -6,
             ),
-            (Negate!(Negate!(Negate!(Num(6)))), -6),
+            (RAdd!(RRead, RNegate!(RNum(6))), -6),
             (
-                Negate(Box::new(Negate(Box::new(Negate(Box::new(Num(0))))))),
+                RNegate(Box::new(RNegate(Box::new(RNegate(Box::new(RNum(6))))))),
+                -6,
+            ),
+            (RNegate!(RNegate!(RNegate!(RNum(6)))), -6),
+            (
+                RNegate(Box::new(RNegate(Box::new(RNegate(Box::new(RNum(0))))))),
                 0,
             ),
-            (Negate!(Negate!(Negate!(Num(0)))), 0),
+            (RNegate!(RNegate!(RNegate!(RNum(0)))), 0),
         ];
 
         a_interp_all(tests);
@@ -125,47 +128,55 @@ mod test_rprog {
     #[test]
     fn test_r1() {
         let tests = vec![
-            (Let("0".into(), Box::new(Num(0)), Box::new(Read)), 0),
-            (Let!("0", Num(0), Read), 0),
+            (RLet("0".into(), Box::new(RNum(0)), Box::new(RRead)), 0),
+            (RLet!("0", RNum(0), RRead), 0),
             (
-                Let(
+                RLet(
                     "0".into(),
-                    Box::new(Num(0)),
-                    Box::new(Let("0".into(), Box::new(Num(1)), Box::new(Var("0".into())))),
+                    Box::new(RNum(0)),
+                    Box::new(RLet(
+                        "0".into(),
+                        Box::new(RNum(1)),
+                        Box::new(RVar("0".into())),
+                    )),
                 ),
                 1,
             ),
-            (Let!("0", Num(0), Let!("0", Num(1), Var!("0"))), 1),
+            (RLet!("0", RNum(0), RLet!("0", RNum(1), RVar!("0"))), 1),
             (
-                Let(
+                RLet(
                     "0".into(),
-                    Box::new(Num(4)),
-                    Box::new(Let(
+                    Box::new(RNum(4)),
+                    Box::new(RLet(
                         "1".into(),
-                        Box::new(Num(5)),
-                        Box::new(Add(Box::new(Var("0".into())), Box::new(Var("1".into())))),
+                        Box::new(RNum(5)),
+                        Box::new(RAdd(Box::new(RVar("0".into())), Box::new(RVar("1".into())))),
                     )),
                 ),
                 9,
             ),
             (
-                Let!("0", Num(4), Let!("1", Num(5), Add!(Var!("0"), Var!("1")))),
+                RLet!(
+                    "0",
+                    RNum(4),
+                    RLet!("1", RNum(5), RAdd!(RVar!("0"), RVar!("1")))
+                ),
                 9,
             ),
             (
-                Let(
+                RLet(
                     "0".into(),
-                    Box::new(Read),
-                    Box::new(Let(
+                    Box::new(RRead),
+                    Box::new(RLet(
                         "1".into(),
-                        Box::new(Read),
-                        Box::new(Add(Box::new(Var("0".into())), Box::new(Var("1".into())))),
+                        Box::new(RRead),
+                        Box::new(RAdd(Box::new(RVar("0".into())), Box::new(RVar("1".into())))),
                     )),
                 ),
                 1,
             ),
             (
-                Let!("0", Read, Let!("1", Read, Add!(Var!("0"), Var!("1")))),
+                RLet!("0", RRead, RLet!("1", RRead, RAdd!(RVar!("0"), RVar!("1")))),
                 1,
             ),
         ];
@@ -175,8 +186,8 @@ mod test_rprog {
 
     fn two_n(n: usize) -> RExpr {
         match n {
-            0 => Num(1),
-            n => Add(Box::new(two_n(n - 1)), Box::new(two_n(n - 1))),
+            0 => RNum(1),
+            n => RAdd(Box::new(two_n(n - 1)), Box::new(two_n(n - 1))),
         }
     }
 

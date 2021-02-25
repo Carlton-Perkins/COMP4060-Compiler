@@ -14,26 +14,26 @@ pub struct CEnv {
     var_map: HashMap<Variable, Number>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CArgument {
     Num(Number),
     Var(Variable),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CExpression {
     Arg(CArgument),
-    Read(),
+    Read,
     Negate(CArgument),
     Add(CArgument, CArgument),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CStatement {
     Set(Variable, CExpression),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CTail {
     Return(CArgument),
     Seq(CStatement, Box<CTail>),
@@ -122,7 +122,7 @@ impl InterpMut for CExpression {
     fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             CExpression::Arg(a) => a.interp(env),
-            CExpression::Read() => {
+            CExpression::Read => {
                 let count = env.read_count;
                 env.read_count += 1;
                 count as Number
@@ -204,9 +204,9 @@ mod test_cprog {
                 vec![(
                     Label!("main"),
                     Seq(
-                        Set("0".into(), Read()),
+                        Set("0".into(), Read),
                         Box::new(Seq(
-                            Set("1".into(), Read()),
+                            Set("1".into(), Read),
                             Box::new(Seq(
                                 Set("2".into(), Add(Var("0".into()), Var("1".into()))),
                                 Box::new(Seq(

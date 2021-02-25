@@ -40,26 +40,26 @@ impl ResolveComplex for RProgram {
 
     fn resolve_complex_(&self, mut env: &mut RCEnv) -> Self {
         match self {
-            Num(_) => self.clone(),
-            Read => lift(self, &mut env),
-            Negate(ex) => {
+            RNum(_) => self.clone(),
+            RRead => lift(self, &mut env),
+            RNegate(ex) => {
                 let ex_rco = ex.resolve_complex_(&mut env);
-                lift(&Negate(Box::new(ex_rco)), &mut env)
+                lift(&RNegate(Box::new(ex_rco)), &mut env)
             }
-            Add(lh, rh) => {
+            RAdd(lh, rh) => {
                 let lh_rco = lh.resolve_complex_(&mut env);
                 let rh_rco = rh.resolve_complex_(&mut env);
 
-                lift(&Add(Box::new(lh_rco), Box::new(rh_rco)), &mut env)
+                lift(&RAdd(Box::new(lh_rco), Box::new(rh_rco)), &mut env)
             }
-            Let(v, ve, be) => {
+            RLet(v, ve, be) => {
                 let ve_rco = ve.resolve_complex_(&mut env);
                 env.renames.insert(v.clone(), ve_rco);
                 let br_rco = be.resolve_complex_(&mut env);
 
                 lift(&br_rco, &mut env)
             }
-            Var(v) => env
+            RVar(v) => env
                 .renames
                 .get(v)
                 .expect(format!("RCO: Unbound var {:?}", v).as_str())
@@ -74,7 +74,7 @@ fn recompose_lifts(seq: &ProgramSeq) -> RExpr {
     match split {
         (first, rest) if rest.len() > 0 => {
             let (label, expr) = first;
-            Let(
+            RLet(
                 label.into(),
                 Box::new(expr.clone()),
                 Box::new(recompose_lifts(&rest.to_vec())),
@@ -82,10 +82,10 @@ fn recompose_lifts(seq: &ProgramSeq) -> RExpr {
         }
         (first, _) => {
             let (label, expr) = first;
-            Let(
+            RLet(
                 label.into(),
                 Box::new(expr.clone()),
-                Box::new(Var(label.into())),
+                Box::new(RVar(label.into())),
             )
         }
     }
@@ -94,7 +94,7 @@ fn recompose_lifts(seq: &ProgramSeq) -> RExpr {
 fn lift(expr: &RExpr, env: &mut RCEnv) -> RExpr {
     let nv: Variable = format!("r{}", env.lifts.len());
     env.lifts.push((nv.clone(), expr.clone()));
-    Var(nv)
+    RVar(nv)
 }
 
 #[cfg(test)]
@@ -111,62 +111,66 @@ mod test_rco {
     #[test]
     fn test_rco() {
         let tests: Tests = vec![
-            (Num(5), Num(5), 5),
-            (Read, Let!("r0", Read, Var!("r0")), 0),
-            (Negate!(Num(1)), Let!("r0", Negate!(Num(1)), Var!("r0")), -1),
+            (RNum(5), RNum(5), 5),
+            (RRead, RLet!("r0", RRead, RVar!("r0")), 0),
             (
-                Add!(Read, Read),
-                Let!(
+                RNegate!(RNum(1)),
+                RLet!("r0", RNegate!(RNum(1)), RVar!("r0")),
+                -1,
+            ),
+            (
+                RAdd!(RRead, RRead),
+                RLet!(
                     "r0",
-                    Read,
-                    Let!(
+                    RRead,
+                    RLet!(
                         "r1",
-                        Read,
-                        Let!("r2", Add!(Var!("r0"), Var!("r1")), Var!("r2"))
+                        RRead,
+                        RLet!("r2", RAdd!(RVar!("r0"), RVar!("r1")), RVar!("r2"))
                     )
                 ),
                 1,
             ),
             (
-                Add(
-                    Box::new(Add(Box::new(Num(3)), Box::new(Num(6)))),
-                    Box::new(Num(2)),
+                RAdd(
+                    Box::new(RAdd(Box::new(RNum(3)), Box::new(RNum(6)))),
+                    Box::new(RNum(2)),
                 ),
-                Let(
+                RLet(
                     "r0".into(),
-                    Box::new(Add(Box::new(Num(3)), Box::new(Num(6)))),
-                    Box::new(Let(
+                    Box::new(RAdd(Box::new(RNum(3)), Box::new(RNum(6)))),
+                    Box::new(RLet(
                         "r1".into(),
-                        Box::new(Add(Box::new(Var("r0".into())), Box::new(Num(2)))),
-                        Box::new(Var("r1".into())),
+                        Box::new(RAdd(Box::new(RVar("r0".into())), Box::new(RNum(2)))),
+                        Box::new(RVar("r1".into())),
                     )),
                 ),
                 11,
             ),
             (
-                Add!(Add!(Num(3), Num(6)), Num(2)),
-                Let!(
+                RAdd!(RAdd!(RNum(3), RNum(6)), RNum(2)),
+                RLet!(
                     "r0",
-                    Add!(Num(3), Num(6)),
-                    Let!("r1", Add!(Var!("r0"), Num(2)), Var!("r1"))
+                    RAdd!(RNum(3), RNum(6)),
+                    RLet!("r1", RAdd!(RVar!("r0"), RNum(2)), RVar!("r1"))
                 ),
                 11,
             ),
             (
-                Add!(Add!(Num(3), Num(6)), Negate!(Add!(Read, Num(2)))),
-                Let!(
+                RAdd!(RAdd!(RNum(3), RNum(6)), RNegate!(RAdd!(RRead, RNum(2)))),
+                RLet!(
                     "r0",
-                    Add!(Num(3), Num(6)),
-                    Let!(
+                    RAdd!(RNum(3), RNum(6)),
+                    RLet!(
                         "r1",
-                        Read,
-                        Let!(
+                        RRead,
+                        RLet!(
                             "r2",
-                            Add!(Var!("r1"), Num(2)),
-                            Let!(
+                            RAdd!(RVar!("r1"), RNum(2)),
+                            RLet!(
                                 "r3",
-                                Negate!(Var!("r2")),
-                                Let!("r4", Add!(Var!("r0"), Var!("r3")), Var!("r4"))
+                                RNegate!(RVar!("r2")),
+                                RLet!("r4", RAdd!(RVar!("r0"), RVar!("r3")), RVar!("r4"))
                             )
                         )
                     )
@@ -174,23 +178,23 @@ mod test_rco {
                 7,
             ),
             (
-                Add!(
-                    Add!(Num(2), Num(3)),
-                    Let!("x", Read, Add!(Var!("x"), Var!("x")))
+                RAdd!(
+                    RAdd!(RNum(2), RNum(3)),
+                    RLet!("x", RRead, RAdd!(RVar!("x"), RVar!("x")))
                 ),
-                Let!(
+                RLet!(
                     "r0",
-                    Add!(Num(2), Num(3)),
-                    Let!(
+                    RAdd!(RNum(2), RNum(3)),
+                    RLet!(
                         "r1",
-                        Read,
-                        Let!(
+                        RRead,
+                        RLet!(
                             "r2",
-                            Add!(Var!("r1"), Var!("r1")),
-                            Let!(
+                            RAdd!(RVar!("r1"), RVar!("r1")),
+                            RLet!(
                                 "r3",
-                                Var!("r2"),
-                                Let!("r4", Add!(Var!("r0"), Var!("r3")), Var!("r4"))
+                                RVar!("r2"),
+                                RLet!("r4", RAdd!(RVar!("r0"), RVar!("r3")), RVar!("r4"))
                             )
                         )
                     )
@@ -228,17 +232,17 @@ mod test_rco {
     fn test_recompose_lifts() {
         let tests = vec![(
             vec![
-                ("a".to_string(), Num(4)),
-                ("b".to_string(), Num(4)),
-                ("c".to_string(), Add!(Var!("a"), Var!("b"))),
+                ("a".to_string(), RNum(4)),
+                ("b".to_string(), RNum(4)),
+                ("c".to_string(), RAdd!(RVar!("a"), RVar!("b"))),
             ],
-            Let!(
+            RLet!(
                 "a",
-                Num(4),
-                Let!(
+                RNum(4),
+                RLet!(
                     "b",
-                    Num(4),
-                    Let!("c", Add!(Var!("a"), Var!("b")), Var!("c"))
+                    RNum(4),
+                    RLet!("c", RAdd!(RVar!("a"), RVar!("b")), RVar!("c"))
                 )
             ),
         )];

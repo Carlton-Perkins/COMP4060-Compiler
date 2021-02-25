@@ -23,24 +23,24 @@ impl ExplicateControl for RProgram {
 
 fn econ_e(expr: &RExpr) -> CExpression {
     match expr {
-        RExpr::Read => CExpression::Read(),
-        RExpr::Negate(e) => CExpression::Negate(econ_a(e)),
-        RExpr::Add(lh, rh) => CExpression::Add(econ_a(lh), econ_a(rh)),
+        RExpr::RRead => CExpression::Read,
+        RExpr::RNegate(e) => CExpression::Negate(econ_a(e)),
+        RExpr::RAdd(lh, rh) => CExpression::Add(econ_a(lh), econ_a(rh)),
         e => CExpression::Arg(econ_a(e)),
     }
 }
 
 fn econ_a(arg: &RExpr) -> CArgument {
     match arg {
-        RExpr::Num(n) => CArgument::Num(*n),
-        RExpr::Var(v) => CArgument::Var(v.clone()),
+        RExpr::RNum(n) => CArgument::Num(*n),
+        RExpr::RVar(v) => CArgument::Var(v.clone()),
         _ => panic!("Econ: Invalid structure {:?}", arg),
     }
 }
 
 fn econ_t(tail: &RExpr) -> CTail {
     match tail {
-        RExpr::Let(v, ve, be) => {
+        RExpr::RLet(v, ve, be) => {
             CTail::Seq(CStatement::Set(v.clone(), econ_e(ve)), Box::new(econ_t(be)))
         }
         e => CTail::Return(econ_a(e)),
@@ -64,30 +64,30 @@ mod test_econ {
     #[test]
     fn test_econ() {
         let tests: Tests = vec![
-            (RExpr::Num(5), 5),
-            (Let!("r0", RExpr::Read, Var!("r0")), 0),
+            (RExpr::RNum(5), 5),
+            (RLet!("r0", RExpr::RRead, RVar!("r0")), 0),
             (
-                Let!(
+                RLet!(
                     "r0",
-                    Add!(RExpr::Num(3), RExpr::Num(6)),
-                    Let!("r1", Add!(Var!("r0"), RExpr::Num(2)), Var!("r1"))
+                    RAdd!(RExpr::RNum(3), RExpr::RNum(6)),
+                    RLet!("r1", RAdd!(RVar!("r0"), RExpr::RNum(2)), RVar!("r1"))
                 ),
                 11,
             ),
             (
-                Let!(
+                RLet!(
                     "r0",
-                    Add!(RExpr::Num(2), RExpr::Num(3)),
-                    Let!(
+                    RAdd!(RExpr::RNum(2), RExpr::RNum(3)),
+                    RLet!(
                         "r1",
-                        RExpr::Read,
-                        Let!(
+                        RExpr::RRead,
+                        RLet!(
                             "r2",
-                            Add!(Var!("r1"), Var!("r1")),
-                            Let!(
+                            RAdd!(RVar!("r1"), RVar!("r1")),
+                            RLet!(
                                 "r3",
-                                Var!("r2"),
-                                Let!("r4", Add!(Var!("r0"), Var!("r3")), Var!("r4"))
+                                RVar!("r2"),
+                                RLet!("r4", RAdd!(RVar!("r0"), RVar!("r3")), RVar!("r4"))
                             )
                         )
                     )

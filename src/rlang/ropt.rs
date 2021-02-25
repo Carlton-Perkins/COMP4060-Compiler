@@ -25,39 +25,39 @@ impl Opt for RExpr {
 
     fn opt(&self, env: &Self::Env) -> Self {
         match self {
-            Num(_) => self.clone(),
-            Read => self.clone(),
-            Negate(ex) => {
+            RNum(_) => self.clone(),
+            RRead => self.clone(),
+            RNegate(ex) => {
                 let o = ex.opt(env);
                 match o {
-                    Num(n) => Num(-1 * n),
-                    Read => Negate(Box::new(o)),
-                    Negate(n) => *n,
-                    Add(_, _) => Negate(Box::new(o)),
-                    n => Negate(Box::new(n)),
+                    RNum(n) => RNum(-1 * n),
+                    RRead => RNegate(Box::new(o)),
+                    RNegate(n) => *n,
+                    RAdd(_, _) => RNegate(Box::new(o)),
+                    n => RNegate(Box::new(n)),
                 }
             }
-            Add(le, re) => {
+            RAdd(le, re) => {
                 let o = (le.opt(env), re.opt(env));
                 match o.clone() {
-                    (Num(l), Num(r)) => Num(l + r),
-                    (Num(l), Add(r1, r2)) => match *r1 {
-                        Num(r) => Add(Box::new(Num(l + r)), r2),
-                        _ => Add(Box::new(o.0), Box::new(o.1)),
+                    (RNum(l), RNum(r)) => RNum(l + r),
+                    (RNum(l), RAdd(r1, r2)) => match *r1 {
+                        RNum(r) => RAdd(Box::new(RNum(l + r)), r2),
+                        _ => RAdd(Box::new(o.0), Box::new(o.1)),
                     },
-                    (Add(l1, l2), Num(r)) => match *l1 {
-                        Num(l) => Add(Box::new(Num(l + r)), l2),
-                        _ => Add(Box::new(o.0), Box::new(o.1)),
+                    (RAdd(l1, l2), RNum(r)) => match *l1 {
+                        RNum(l) => RAdd(Box::new(RNum(l + r)), l2),
+                        _ => RAdd(Box::new(o.0), Box::new(o.1)),
                     },
-                    (Add(l1, l2), Add(r1, r2)) => match (*l1, *r1) {
-                        (Num(l), Num(r)) => Add(Box::new(Num(l + r)), Box::new(Add(l2, r2))),
-                        _ => Add(Box::new(o.0), Box::new(o.1)),
+                    (RAdd(l1, l2), RAdd(r1, r2)) => match (*l1, *r1) {
+                        (RNum(l), RNum(r)) => RAdd(Box::new(RNum(l + r)), Box::new(RAdd(l2, r2))),
+                        _ => RAdd(Box::new(o.0), Box::new(o.1)),
                     },
-                    (l, Num(n)) => Add(Box::new(Num(n)), Box::new(l)),
-                    _ => Add(Box::new(o.0), Box::new(o.1)),
+                    (l, RNum(n)) => RAdd(Box::new(RNum(n)), Box::new(l)),
+                    _ => RAdd(Box::new(o.0), Box::new(o.1)),
                 }
             }
-            Let(id, ve, be) => {
+            RLet(id, ve, be) => {
                 let o_ve = ve.opt(env);
                 if o_ve.is_pure() {
                     let mut new_env = env.clone();
@@ -65,12 +65,12 @@ impl Opt for RExpr {
                     be.opt(&new_env)
                 } else {
                     let o_be = be.opt(env);
-                    Let(id.clone(), Box::new(o_ve), Box::new(o_be))
+                    RLet(id.clone(), Box::new(o_ve), Box::new(o_be))
                 }
             }
-            Var(id) => match env.vars.get(id) {
+            RVar(id) => match env.vars.get(id) {
                 Some(e) => e.clone(),
-                None => Var(id.clone()),
+                None => RVar(id.clone()),
             },
         }
     }
@@ -112,13 +112,13 @@ mod test_ropt {
     #[test]
     fn test_opt_r0() {
         let test_expr = vec![
-            (Num(5), Num(5), 5),
-            (Negate(Box::new(Num(5))), Num(-5), -5),
-            (Negate(Box::new(Read)), Negate(Box::new(Read)), 0),
-            (Add(Box::new(Num(3)), Box::new(Num(2))), Num(5), 5),
+            (RNum(5), RNum(5), 5),
+            (RNegate(Box::new(RNum(5))), RNum(-5), -5),
+            (RNegate(Box::new(RRead)), RNegate(Box::new(RRead)), 0),
+            (RAdd(Box::new(RNum(3)), Box::new(RNum(2))), RNum(5), 5),
             (
-                Add(Box::new(Num(3)), Box::new(Read)),
-                Add(Box::new(Num(3)), Box::new(Read)),
+                RAdd(Box::new(RNum(3)), Box::new(RRead)),
+                RAdd(Box::new(RNum(3)), Box::new(RRead)),
                 3,
             ),
         ];
@@ -130,45 +130,53 @@ mod test_ropt {
     fn test_opt_r1() {
         let test_expr = vec![
             (
-                Let("0".into(), Box::new(Num(0)), Box::new(Num(1))),
-                Num(1),
+                RLet("0".into(), Box::new(RNum(0)), Box::new(RNum(1))),
+                RNum(1),
                 1,
             ),
-            (Let("0".into(), Box::new(Num(5)), Box::new(Read)), Read, 0),
             (
-                Let("0".into(), Box::new(Num(5)), Box::new(Var("0".into()))),
-                Num(5),
-                5,
-            ),
-            (
-                Let("0".into(), Box::new(Read), Box::new(Var("0".into()))),
-                Let("0".into(), Box::new(Read), Box::new(Var("0".into()))),
+                RLet("0".into(), Box::new(RNum(5)), Box::new(RRead)),
+                RRead,
                 0,
             ),
             (
-                Let(
+                RLet("0".into(), Box::new(RNum(5)), Box::new(RVar("0".into()))),
+                RNum(5),
+                5,
+            ),
+            (
+                RLet("0".into(), Box::new(RRead), Box::new(RVar("0".into()))),
+                RLet("0".into(), Box::new(RRead), Box::new(RVar("0".into()))),
+                0,
+            ),
+            (
+                RLet(
                     "0".into(),
-                    Box::new(Num(5)),
-                    Box::new(Let("0".into(), Box::new(Num(6)), Box::new(Var("0".into())))),
+                    Box::new(RNum(5)),
+                    Box::new(RLet(
+                        "0".into(),
+                        Box::new(RNum(6)),
+                        Box::new(RVar("0".into())),
+                    )),
                 ),
-                Num(6),
+                RNum(6),
                 6,
             ),
             (
-                Let(
+                RLet(
                     "0".into(),
-                    Box::new(Num(3)),
-                    Box::new(Let(
+                    Box::new(RNum(3)),
+                    Box::new(RLet(
                         "1".into(),
-                        Box::new(Num(2)),
-                        Box::new(Let(
+                        Box::new(RNum(2)),
+                        Box::new(RLet(
                             "2".into(),
-                            Box::new(Add(Box::new(Var("0".into())), Box::new(Var("1".into())))),
-                            Box::new(Add(Box::new(Read), Box::new(Var("2".into())))),
+                            Box::new(RAdd(Box::new(RVar("0".into())), Box::new(RVar("1".into())))),
+                            Box::new(RAdd(Box::new(RRead), Box::new(RVar("2".into())))),
                         )),
                     )),
                 ),
-                Add(Box::new(Num(5)), Box::new(Read)),
+                RAdd(Box::new(RNum(5)), Box::new(RRead)),
                 5,
             ),
         ];

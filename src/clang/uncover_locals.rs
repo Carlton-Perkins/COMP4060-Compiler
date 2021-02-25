@@ -63,7 +63,7 @@ impl LocateVars for CExpression {
     fn locate_vars(&self) -> LocalsInfo {
         match self {
             CExpression::Arg(e) => e.locate_vars(),
-            CExpression::Read() => LocalsInfo::new(),
+            CExpression::Read => LocalsInfo::new(),
             CExpression::Negate(e) => e.locate_vars(),
             CExpression::Add(lh, rh) => lh
                 .locate_vars()
@@ -152,9 +152,9 @@ mod test_uncover_locals {
                 vec![(
                     Label!("main"),
                     Seq(
-                        Set("0".into(), Read()),
+                        Set("0".into(), Read),
                         Box::new(Seq(
-                            Set("1".into(), Read()),
+                            Set("1".into(), Read),
                             Box::new(Seq(
                                 Set("2".into(), Add(Var("0".into()), Var("1".into()))),
                                 Box::new(Seq(

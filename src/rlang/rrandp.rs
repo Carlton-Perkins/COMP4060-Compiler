@@ -17,11 +17,11 @@ impl RandEnv {
 
 pub fn randp(depth: usize, env: &RandEnv) -> RExpr {
     type DoType = Box<dyn Fn(usize, &RandEnv) -> RExpr>;
-    let do_read = |_: usize, _: &RandEnv| -> RExpr { Read };
-    let do_num = |_: usize, _: &RandEnv| -> RExpr { Num(random::<i8>() as i64) };
+    let do_read = |_: usize, _: &RandEnv| -> RExpr { RRead };
+    let do_num = |_: usize, _: &RandEnv| -> RExpr { RNum(random::<i8>() as i64) };
     let do_var = |_: usize, env: &RandEnv| -> RExpr {
         let mut rng = thread_rng();
-        Var((env.vars.choose(&mut rng).unwrap()).to_string())
+        RVar((env.vars.choose(&mut rng).unwrap()).to_string())
     };
     let mut do_dzero: Vec<DoType> = vec![Box::new(do_read), Box::new(do_num)];
     if env.vars.len() > 0 {
@@ -29,18 +29,18 @@ pub fn randp(depth: usize, env: &RandEnv) -> RExpr {
     }
 
     let do_add = |depth: usize, env: &RandEnv| -> RExpr {
-        Add(
+        RAdd(
             Box::new(randp(depth - 1, env)),
             Box::new(randp(depth - 1, env)),
         )
     };
     let do_negate =
-        |depth: usize, env: &RandEnv| -> RExpr { Negate(Box::new(randp(depth - 1, env))) };
+        |depth: usize, env: &RandEnv| -> RExpr { RNegate(Box::new(randp(depth - 1, env))) };
     let do_let = |depth: usize, env: &RandEnv| -> RExpr {
         let mut new_env = env.clone();
         let new_var = new_env.vars.len().to_string();
         new_env.vars.push(new_var.clone());
-        Let(
+        RLet(
             new_var,
             Box::new(randp(depth - 1, env)),
             Box::new(randp(depth - 1, &new_env)),

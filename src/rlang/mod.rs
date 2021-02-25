@@ -1,8 +1,3 @@
-#[allow(dead_code, unused_macros)]
-#[macro_use]
-mod rmacros;
-pub use rmacros::*;
-
 #[allow(dead_code)]
 mod rprog;
 pub use rprog::{REnv, RExpr, RProgram};
