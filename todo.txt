@@ -37,7 +37,7 @@ x 2021-02-23 Write a few tests for uncover-locals that predict its output.
 x 2021-02-23 Implement the uncover-locals pass for C0 programs.
 x 2021-02-23 Connect uncover-locals to your test suite.
 x 2021-02-25 Write a half-dozen tests for select-instr that predict its output.
-Implement the select-instr pass for C0 programs.
+x 2021-02-25 Implement the select-instr pass for C0 programs.
 Connect select-instr to your test suite.
 Write a few tests for assign-homes that predict its output.
 Implement the assign-homes pass for X0 programs.

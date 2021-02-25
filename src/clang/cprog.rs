@@ -7,13 +7,6 @@ use std::collections::HashMap;
 type CLabelMapping = HashMap<Label, CTail>;
 pub type CProgram = CLabelMapping;
 
-#[derive(Clone)]
-pub struct CEnv {
-    read_count: usize,
-    block_map: CLabelMapping,
-    var_map: HashMap<Variable, Number>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CArgument {
     Num(Number),
@@ -37,6 +30,13 @@ pub enum CStatement {
 pub enum CTail {
     Return(CArgument),
     Seq(CStatement, Box<CTail>),
+}
+
+#[derive(Clone)]
+pub struct CEnv {
+    read_count: usize,
+    block_map: CLabelMapping,
+    var_map: HashMap<Variable, Number>,
 }
 
 impl CEnv {

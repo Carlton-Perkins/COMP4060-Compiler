@@ -1,5 +1,5 @@
 use crate::common::{
-    traits::{Emit, Interp},
+    traits::Emit,
     types::{Address, Label, Number, Variable},
 };
 use std::collections::HashMap;
@@ -10,12 +10,20 @@ const NEWLINE: &str = "\n";
 pub type XBlock = Vec<XInstruction>;
 pub type XProgram = HashMap<Label, XBlock>;
 
+pub trait XInterpMut {
+    type Env;
+    type Output;
+
+    fn interp(&self, env: &mut Self::Env) -> Self::Output;
+}
+
 #[derive(Clone)]
 pub struct XEnv {
     register: HashMap<XRegister, Number>,
-    variable: HashMap<Variable, Address>,
+    variable: HashMap<Variable, Number>,
     memory: HashMap<Address, Number>,
     block: XProgram,
+    readc: usize,
 }
 
 #[derive(Debug, strum_macros::ToString, PartialEq, Eq, Hash, Clone, Copy)]
@@ -66,6 +74,7 @@ impl XEnv {
             variable: HashMap::new(),
             memory: HashMap::new(),
             block: prog,
+            readc: 0,
         }
     }
 }
@@ -136,30 +145,40 @@ impl Emit for XProgram {
     }
 }
 
-impl Interp for Label {
+impl XInterpMut for Label {
     type Env = XEnv;
     type Output = XEnv;
 
-    fn interp(&self, env: &Self::Env) -> Self::Output {
+    fn interp(&self, env: &mut Self::Env) -> Self::Output {
         let get = env.block.get(self).clone();
         match get {
             Some(blk) => blk.clone().interp(env),
-            None => panic!("No label {} found in program", self),
+            None => match self.as_str() {
+                "_read_int" => {
+                    let blk = vec![XInstruction::Movq(
+                        XArgument::Con(env.readc as Number),
+                        XArgument::Reg(XRegister::RAX),
+                    )];
+                    env.readc += 1;
+                    blk.interp(env)
+                }
+                _ => panic!("No label {} found in program", self),
+            },
         }
     }
 }
 
-impl Interp for XInstruction {
+impl XInterpMut for XInstruction {
     type Env = XEnv;
     type Output = XEnv;
 
-    fn interp(&self, env: &Self::Env) -> Self::Output {
+    fn interp(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             XInstruction::Addq(src, dst) => set(dst, &(value(src, env) + value(dst, env)), env),
             XInstruction::Subq(src, dst) => set(dst, &(value(src, env) - value(dst, env)), env),
             XInstruction::Movq(src, dst) => set(dst, &value(src, env), env),
             XInstruction::Retq => env.clone(),
-            XInstruction::Negq(v) => set(v, &value(v, env), env),
+            XInstruction::Negq(v) => set(v, &(-1 * value(v, env)), env),
             XInstruction::Callq(l) => l.interp(env),
             XInstruction::Jmp(l) => l.interp(env),
             XInstruction::Pushq(src) => push(src, env),
@@ -168,29 +187,29 @@ impl Interp for XInstruction {
     }
 }
 
-impl Interp for XBlock {
+impl XInterpMut for XBlock {
     type Env = XEnv;
     type Output = XEnv;
 
-    fn interp(&self, env: &Self::Env) -> Self::Output {
+    fn interp(&self, mut env: &mut Self::Env) -> Self::Output {
         match self.split_first() {
             Some((first, rest)) => rest
                 .into_iter()
                 .map(|x| x.clone())
                 .collect::<XBlock>()
-                .interp(&first.interp(&env)),
+                .interp(&mut first.interp(&mut env)),
             None => env.clone(),
         }
     }
 }
 
-impl Interp for XProgram {
+impl XInterpMut for XProgram {
     type Env = XEnv;
     type Output = Number;
 
-    fn interp(&self, _: &Self::Env) -> Self::Output {
-        let env = Self::Env::new(self.clone());
-        let ret_env = Label!("main").interp(&env);
+    fn interp(&self, _: &mut Self::Env) -> Self::Output {
+        let mut env = Self::Env::new(self.clone());
+        let ret_env = Label!("main").interp(&mut env);
         value(&XArgument::Reg(XRegister::RAX), &ret_env)
     }
 }
@@ -212,8 +231,7 @@ fn set(dst: &XArgument, val: &Number, env: &XEnv) -> XEnv {
         }
         XArgument::Var(var) => {
             let mut env_c = env.clone();
-            let var_loc = env_c.variable.get(var).unwrap();
-            env_c.memory.insert(*var_loc, *val);
+            env_c.variable.insert(var.into(), *val);
             env_c
         }
     }
@@ -398,8 +416,8 @@ mod test_xprog {
     fn test_xprog() {
         for (test_prog, expected_res) in get_test_progs() {
             let c_res = compile_and_run(&test_prog.emit());
-            let interp_env = XEnv::new(HashMap::new());
-            let i_res = test_prog.interp(&interp_env);
+            let mut interp_env = XEnv::new(HashMap::new());
+            let i_res = test_prog.interp(&mut interp_env);
 
             assert_eq!(i_res, expected_res);
 
@@ -433,8 +451,8 @@ mod test_xprog {
     #[test]
     fn test_xprog_interp() {
         for (test_prog, expected_res) in get_test_progs() {
-            let interp_env = XEnv::new(HashMap::new());
-            let res = test_prog.interp(&interp_env);
+            let mut interp_env = XEnv::new(HashMap::new());
+            let res = test_prog.interp(&mut interp_env);
 
             assert_eq!(
                 res, expected_res,
