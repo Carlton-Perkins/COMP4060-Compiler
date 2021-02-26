@@ -68,12 +68,12 @@ pub enum XInstruction {
 }
 
 impl XEnv {
-    pub fn new(prog: XProgram) -> Self {
+    pub fn new(prog: &XProgram) -> Self {
         XEnv {
             register: HashMap::new(),
             variable: HashMap::new(),
             memory: HashMap::new(),
-            block: prog,
+            block: prog.clone(),
             readc: 0,
         }
     }
@@ -208,7 +208,7 @@ impl XInterpMut for XProgram {
     type Output = Number;
 
     fn interp(&self, _: &mut Self::Env) -> Self::Output {
-        let mut env = Self::Env::new(self.clone());
+        let mut env = Self::Env::new(self);
         let ret_env = Label!("main").interp(&mut env);
         value(&XArgument::Reg(XRegister::RAX), &ret_env)
     }
@@ -416,7 +416,7 @@ mod test_xprog {
     fn test_xprog() {
         for (test_prog, expected_res) in get_test_progs() {
             let c_res = compile_and_run(&test_prog.emit());
-            let mut interp_env = XEnv::new(HashMap::new());
+            let mut interp_env = XEnv::new(&HashMap::new());
             let i_res = test_prog.interp(&mut interp_env);
 
             assert_eq!(i_res, expected_res);
@@ -451,7 +451,7 @@ mod test_xprog {
     #[test]
     fn test_xprog_interp() {
         for (test_prog, expected_res) in get_test_progs() {
-            let mut interp_env = XEnv::new(HashMap::new());
+            let mut interp_env = XEnv::new(&HashMap::new());
             let res = test_prog.interp(&mut interp_env);
 
             assert_eq!(

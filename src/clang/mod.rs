@@ -8,3 +8,4 @@ pub use uncover_locals::{CProgramInfo, LocalsInfo, UncoverLocals};
 
 #[allow(dead_code)]
 mod select_instructions;
+pub use select_instructions::SelectInstruction;

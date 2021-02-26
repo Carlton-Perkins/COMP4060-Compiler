@@ -4,7 +4,7 @@ use crate::{
     xlang::{xprog::XProgram, XArgument, XBlock, XInstruction, XRegister::*},
 };
 
-trait SelectInstruction {
+pub trait SelectInstruction {
     fn select_instr(&self) -> XProgram;
 }
 
@@ -134,8 +134,8 @@ mod test_select_instruction {
         for (cprog, expected_xprog) in tests {
             let c_res = cprog.interp(&mut CEnv::new(&cprog));
             let xprog = cprog.select_instr();
-            let x_expected_res = expected_xprog.interp(&mut XEnv::new(HashMap::new()));
-            let x_res = xprog.interp(&mut XEnv::new(HashMap::new()));
+            let x_expected_res = expected_xprog.interp(&mut XEnv::new(&HashMap::new()));
+            let x_res = xprog.interp(&mut XEnv::new(&HashMap::new()));
 
             assert_eq!(xprog, expected_xprog);
             assert_eq!(c_res, x_expected_res);

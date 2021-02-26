@@ -59,9 +59,10 @@ pub fn randp(depth: usize, env: &RandEnv) -> RExpr {
 mod test_rrandp {
     use super::*;
     use crate::{
-        clang::{CEnv, UncoverLocals},
+        clang::{CEnv, SelectInstruction, UncoverLocals},
         common::traits::InterpMut,
         rlang::{ECEnv, ExplicateControl, REnv, ResolveComplex, UEnv, Uniquify},
+        xlang::{XEnv, XInterpMut},
     };
 
     #[test]
@@ -88,6 +89,10 @@ mod test_rrandp {
                 let (ul, _) = econ.uncover_locals();
                 let ul_ret = ul.interp(&mut CEnv::new(&ul));
                 assert_eq!(e_ret, ul_ret);
+
+                let sel_inst = ul.select_instr();
+                let sel_inst_ret = sel_inst.interp(&mut XEnv::new(&sel_inst));
+                assert_eq!(e_ret, sel_inst_ret);
             }
         }
     }
