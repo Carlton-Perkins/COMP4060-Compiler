@@ -4,3 +4,4 @@ pub use xprog::{XArgument, XBlock, XEnv, XInstruction, XInterpMut, XProgram, XRe
 
 #[allow(dead_code)]
 mod assign_homes;
+pub use assign_homes::AssignHomes;
