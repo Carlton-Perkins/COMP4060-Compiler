@@ -280,6 +280,7 @@ mod test_xprog {
         fs::File,
         io::{stderr, stdout, Write},
         os::unix::process::ExitStatusExt,
+        path::Path,
         process::{Command, Output},
         vec,
     };
@@ -296,13 +297,16 @@ mod test_xprog {
         let dir = tempdir().expect("Failled to alocate temp dir");
         println!("TempDir: {:?}", dir.as_ref());
         let temp_file = dir.path().join("asm.s");
+        let runtime_path = Path::new("./src/xlang/runtime.c")
+            .canonicalize()
+            .expect("No runtime found");
         let mut file = File::create(temp_file.clone()).expect("Failed to create temp file");
         file.write_all(prog.as_bytes())
             .expect("Failed to write asm to file");
         // Assemble that file
         let asmer = "gcc";
         let temp_file_path = temp_file.as_path().to_str().unwrap();
-        let asm_args = &["-c", temp_file_path, "-g"];
+        let asm_args = &["-c", temp_file_path, runtime_path.to_str().unwrap(), "-g"];
         let asm_res =
             run_cmd_and_print(Command::new(asmer).current_dir(dir.as_ref()).args(asm_args));
 

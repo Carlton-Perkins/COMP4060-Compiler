@@ -66,7 +66,7 @@ mod test_patch_instructions {
     use crate::xlang::{XEnv, XInterpMut};
 
     #[test]
-    fn test_() {
+    fn test_patch() {
         let tests: Vec<(XProgram, XProgram)> = vec![
             (
                 XProgram!(

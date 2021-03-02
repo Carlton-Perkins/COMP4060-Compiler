@@ -45,7 +45,7 @@ x 2021-02-28 Connect assign-homes to your test suite.
 x 2021-03-01 Write a half-dozen tests for patch-instructions that predict its output.
 x 2021-03-01 Implement the patch-instructions pass for X0 programs.
 x 2021-03-01 Connect patch-instructions to your test suite.
-Implement your language runtime.
+x 2021-03-02 Implement your language runtime.
 Implement the main-generation pass for X0 programs.
 Connect your test suite to your system assembler and language runtime.
 Write a dozen tests for uncover-live that predict its output.
