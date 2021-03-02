@@ -62,7 +62,7 @@ mod test_rrandp {
         clang::{CEnv, SelectInstruction, UncoverLocals},
         common::traits::InterpMut,
         rlang::{ECEnv, ExplicateControl, REnv, ResolveComplex, UEnv, Uniquify},
-        xlang::{AssignHomes, XEnv, XInterpMut},
+        xlang::{AssignHomes, PatchInstructions, XEnv, XInterpMut},
     };
 
     #[test]
@@ -98,6 +98,10 @@ mod test_rrandp {
                 let asn = sel_inst.asn_homes(&local_info);
                 let asn_ret = asn.interp(&mut XEnv::new(&asn));
                 assert_eq!(e_ret, asn_ret);
+
+                let patch = asn.patch();
+                let patch_ret = patch.interp(&mut XEnv::new(&patch));
+                assert_eq!(e_ret, patch_ret);
             }
         }
     }

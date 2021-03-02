@@ -8,3 +8,4 @@ pub use assign_homes::AssignHomes;
 
 #[allow(dead_code)]
 mod patch_instructions;
+pub use patch_instructions::PatchInstructions;
