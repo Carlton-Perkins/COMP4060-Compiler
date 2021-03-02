@@ -162,6 +162,7 @@ impl XInterpMut for Label {
                     env.readc += 1;
                     blk.interp(env)
                 }
+                "_print_int" => env.clone(),
                 _ => panic!("No label {} found in program", self),
             },
         }

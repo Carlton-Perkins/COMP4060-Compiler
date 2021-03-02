@@ -45,6 +45,8 @@ impl AssignHomes for XProgram {
         );
         let new_end = XBlock!(
             "end",
+            Movq(Reg(RAX), Reg(RSI)),
+            Callq(Label!("_print_int")),
             Addq(Con(stack_space as Number), Reg(RSP)),
             Popq(Reg(RBP)),
             Retq
@@ -120,7 +122,14 @@ mod test_assign_homes {
                         Subq(Con(16), Reg(RSP)),
                         Jmp(Label!("body"))
                     ),
-                    XBlock!("end", Addq(Con(16), Reg(RSP)), Popq(Reg(RBP)), Retq),
+                    XBlock!(
+                        "end",
+                        Movq(Reg(RAX), Reg(RSI)),
+                        Callq(Label!("_print_int")),
+                        Addq(Con(16), Reg(RSP)),
+                        Popq(Reg(RBP)),
+                        Retq
+                    ),
                     XBlock!(
                         "body",
                         Callq(Label!("_read_int")),
@@ -150,7 +159,14 @@ mod test_assign_homes {
                         Subq(Con(32), Reg(RSP)),
                         Jmp(Label!("body"))
                     ),
-                    XBlock!("end", Addq(Con(32), Reg(RSP)), Popq(Reg(RBP)), Retq),
+                    XBlock!(
+                        "end",
+                        Movq(Reg(RAX), Reg(RSI)),
+                        Callq(Label!("_print_int")),
+                        Addq(Con(32), Reg(RSP)),
+                        Popq(Reg(RBP)),
+                        Retq
+                    ),
                     XBlock!(
                         "body",
                         Movq(Con(3), Deref(RBP, 0)),
