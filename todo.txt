@@ -43,7 +43,7 @@ x 2021-02-28 Write a few tests for assign-homes that predict its output.
 x 2021-02-28 Implement the assign-homes pass for X0 programs.
 x 2021-02-28 Connect assign-homes to your test suite.
 x 2021-03-01 Write a half-dozen tests for patch-instructions that predict its output.
-Implement the patch-instructions pass for X0 programs.
+x 2021-03-01 Implement the patch-instructions pass for X0 programs.
 Connect patch-instructions to your test suite.
 Implement your language runtime.
 Implement the main-generation pass for X0 programs.

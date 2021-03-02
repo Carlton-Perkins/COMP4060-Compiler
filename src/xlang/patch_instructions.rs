@@ -1,12 +1,62 @@
 use crate::xlang::{XArgument::*, XBlock, XInstruction::*, XProgram, XRegister::*};
 
-trait PatchInstructions {
+use super::XInstruction;
+pub trait PatchInstructions {
     fn patch(&self) -> Self;
+}
+
+trait DoPatch: Sized {
+    fn do_patch(&self) -> Vec<Self>;
 }
 
 impl PatchInstructions for XProgram {
     fn patch(&self) -> Self {
-        todo!()
+        self.into_iter()
+            .map(|(lab, prog)| (lab.clone(), prog.patch()))
+            .collect()
+    }
+}
+
+impl PatchInstructions for XBlock {
+    fn patch(&self) -> Self {
+        self.into_iter()
+            .map(|x| x.do_patch())
+            .flatten()
+            .map(|x| x.clone())
+            .collect()
+    }
+}
+
+impl DoPatch for XInstruction {
+    fn do_patch(&self) -> Vec<Self> {
+        let temp_reg = RAX;
+        match self {
+            Addq(Deref(lr, lo), Deref(rr, ro)) => {
+                let src = Deref(lr.clone(), lo.clone());
+                let dst = Deref(rr.clone(), ro.clone());
+                vec![
+                    Movq(src.clone(), Reg(temp_reg)),
+                    Addq(Reg(temp_reg), dst.clone()),
+                ]
+            }
+            Subq(Deref(lr, lo), Deref(rr, ro)) => {
+                let src = Deref(lr.clone(), lo.clone());
+                let dst = Deref(rr.clone(), ro.clone());
+                vec![
+                    Movq(src.clone(), Reg(temp_reg)),
+                    Subq(Reg(temp_reg), dst.clone()),
+                ]
+            }
+            Movq(Deref(lr, lo), Deref(rr, ro)) => {
+                let src = Deref(lr.clone(), lo.clone());
+                let dst = Deref(rr.clone(), ro.clone());
+                vec![
+                    Movq(src.clone(), Reg(temp_reg)),
+                    Movq(Reg(temp_reg), dst.clone()),
+                ]
+            }
+            _ => vec![self.clone()],
+        }
     }
 }
 
