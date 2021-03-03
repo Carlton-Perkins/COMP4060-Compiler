@@ -57,6 +57,9 @@ pub fn randp(depth: usize, env: &RandEnv) -> RExpr {
 
 #[cfg(test)]
 mod test_rrandp {
+    use itertools::Itertools;
+    use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+
     use super::*;
     use crate::{
         clang::{CEnv, SelectInstruction, UncoverLocals},
@@ -67,46 +70,53 @@ mod test_rrandp {
 
     #[test]
     fn test_randp() {
-        for depth in 0..10 {
-            for _ in 0..10 {
-                // RLang
-                let e = randp(depth, &RandEnv::new());
-                println!("Program: {:?}", e);
-                let e_ret = e.interp(&mut REnv::new());
+        let max_depth = 10;
+        let iter_per_depth = 10;
 
-                let u = e.uniquify(&mut UEnv::new());
-                let u_ret = u.interp(&mut REnv::new());
-                assert_eq!(e_ret, u_ret);
+        let jobs: Vec<(usize, usize)> = (0..max_depth)
+            .cartesian_product(0..iter_per_depth)
+            .collect();
+        jobs.par_iter()
+            .for_each(|(depth, _)| test_random_program(*depth));
+    }
 
-                let rco = u.resolve_complex();
-                let rco_ret = rco.interp(&mut REnv::new());
-                assert_eq!(e_ret, rco_ret);
+    fn test_random_program(depth: usize) {
+        // RLang
+        let e = randp(depth, &RandEnv::new());
+        println!("Program: {:?}", e);
+        let e_ret = e.interp(&mut REnv::new());
 
-                let econ = rco.explicate_control(ECEnv::new());
-                let econ_ret = econ.interp(&mut CEnv::new(&econ));
-                assert_eq!(e_ret, econ_ret);
+        let u = e.uniquify(&mut UEnv::new());
+        let u_ret = u.interp(&mut REnv::new());
+        assert_eq!(e_ret, u_ret);
 
-                // CLang
-                let (ul, local_info) = econ.uncover_locals();
-                let ul_ret = ul.interp(&mut CEnv::new(&ul));
-                assert_eq!(e_ret, ul_ret);
+        let rco = u.resolve_complex();
+        let rco_ret = rco.interp(&mut REnv::new());
+        assert_eq!(e_ret, rco_ret);
 
-                let sel_inst = ul.select_instr();
-                let sel_inst_ret = sel_inst.interp(&mut XEnv::new(&sel_inst));
-                assert_eq!(e_ret, sel_inst_ret);
+        let econ = rco.explicate_control(ECEnv::new());
+        let econ_ret = econ.interp(&mut CEnv::new(&econ));
+        assert_eq!(e_ret, econ_ret);
 
-                // XLang
-                let asn = sel_inst.asn_homes(&local_info);
-                let asn_ret = asn.interp(&mut XEnv::new(&asn));
-                assert_eq!(e_ret, asn_ret);
+        // CLang
+        let (ul, local_info) = econ.uncover_locals();
+        let ul_ret = ul.interp(&mut CEnv::new(&ul));
+        assert_eq!(e_ret, ul_ret);
 
-                let patch = asn.patch();
-                let patch_ret = patch.interp(&mut XEnv::new(&patch));
-                assert_eq!(e_ret, patch_ret);
+        let sel_inst = ul.select_instr();
+        let sel_inst_ret = sel_inst.interp(&mut XEnv::new(&sel_inst));
+        assert_eq!(e_ret, sel_inst_ret);
 
-                let sys_res = patch.run();
-                assert_eq!(e_ret, sys_res);
-            }
-        }
+        // XLang
+        let asn = sel_inst.asn_homes(&local_info);
+        let asn_ret = asn.interp(&mut XEnv::new(&asn));
+        assert_eq!(e_ret, asn_ret);
+
+        let patch = asn.patch();
+        let patch_ret = patch.interp(&mut XEnv::new(&patch));
+        assert_eq!(e_ret, patch_ret);
+
+        let sys_res = patch.run();
+        assert_eq!(e_ret, sys_res);
     }
 }
