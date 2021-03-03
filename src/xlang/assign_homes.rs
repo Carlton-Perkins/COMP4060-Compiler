@@ -33,7 +33,7 @@ impl AssignHomes for XProgram {
             .sorted_by_key(|x| x.clone())
             .into_iter()
             .enumerate()
-            .map(|(idx, label)| (label.clone(), Deref(RBP, (8 * idx) as i64)))
+            .map(|(idx, label)| (label.clone(), Deref(RBP, (-8 * idx as isize) as i64)))
             .collect();
         println!("Renames {:?}", renames);
         let new_main = XBlock!(
@@ -45,14 +45,17 @@ impl AssignHomes for XProgram {
         );
         let new_end = XBlock!(
             "end",
-            Movq(Reg(RAX), Reg(RSI)),
+            Movq(Reg(RAX), Reg(RDI)),
             Callq(Label!("_print_int")),
             Addq(Con(stack_space as Number), Reg(RSP)),
             Popq(Reg(RBP)),
             Retq
         );
         let body = self.get(&Label!("main")).unwrap();
-        let new_body = (Label!("body"), body.asn(&renames));
+        let new_body = (
+            Label!("body"),
+            [body.asn(&renames), vec![Jmp(Label!("end"))]].concat(),
+        );
 
         XProgram!(new_main, new_body, new_end)
     }
@@ -124,7 +127,7 @@ mod test_assign_homes {
                     ),
                     XBlock!(
                         "end",
-                        Movq(Reg(RAX), Reg(RSI)),
+                        Movq(Reg(RAX), Reg(RDI)),
                         Callq(Label!("_print_int")),
                         Addq(Con(16), Reg(RSP)),
                         Popq(Reg(RBP)),
@@ -136,6 +139,7 @@ mod test_assign_homes {
                         Callq(Label!("_read_int")),
                         Movq(Reg(RAX), Deref(RBP, 0)),
                         Movq(Deref(RBP, 0), Reg(RAX)),
+                        Jmp(Label!("end")),
                     )
                 ),
             ),
@@ -161,7 +165,7 @@ mod test_assign_homes {
                     ),
                     XBlock!(
                         "end",
-                        Movq(Reg(RAX), Reg(RSI)),
+                        Movq(Reg(RAX), Reg(RDI)),
                         Callq(Label!("_print_int")),
                         Addq(Con(32), Reg(RSP)),
                         Popq(Reg(RBP)),
@@ -170,10 +174,11 @@ mod test_assign_homes {
                     XBlock!(
                         "body",
                         Movq(Con(3), Deref(RBP, 0)),
-                        Movq(Con(2), Deref(RBP, 8)),
-                        Movq(Deref(RBP, 8), Deref(RBP, 16)),
-                        Addq(Deref(RBP, 0), Deref(RBP, 16)),
-                        Movq(Deref(RBP, 16), Reg(RAX)),
+                        Movq(Con(2), Deref(RBP, -8)),
+                        Movq(Deref(RBP, -8), Deref(RBP, -16)),
+                        Addq(Deref(RBP, 0), Deref(RBP, -16)),
+                        Movq(Deref(RBP, -16), Reg(RAX)),
+                        Jmp(Label!("end")),
                     )
                 ),
             ),

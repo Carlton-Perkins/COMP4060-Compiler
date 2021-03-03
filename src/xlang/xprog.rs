@@ -24,6 +24,7 @@ pub struct XEnv {
     memory: HashMap<Address, Number>,
     block: XProgram,
     readc: usize,
+    printed: Vec<Number>,
 }
 
 #[derive(Debug, strum_macros::ToString, PartialEq, Eq, Hash, Clone, Copy)]
@@ -75,6 +76,7 @@ impl XEnv {
             memory: HashMap::new(),
             block: prog.clone(),
             readc: 0,
+            printed: Vec::new(),
         }
     }
 }
@@ -96,7 +98,11 @@ impl Emit for XArgument {
         match self {
             XArgument::Con(n) => format!("${}", n),
             XArgument::Reg(r) => r.emit(),
-            XArgument::Deref(r, n) => format!("{}({})", r.emit(), n),
+            XArgument::Deref(r, n) => match n {
+                0 => format!("({})", r.emit()),
+                n => format!("{}({})", n, r.emit()),
+            },
+
             XArgument::Var(v) => format!("!{}!", v),
         }
     }
@@ -162,7 +168,11 @@ impl XInterpMut for Label {
                     env.readc += 1;
                     blk.interp(env)
                 }
-                "_print_int" => env.clone(),
+                "_print_int" => {
+                    env.printed
+                        .push(*env.register.get(&XRegister::RDI).unwrap_or(&0));
+                    env.clone()
+                }
                 _ => panic!("No label {} found in program", self),
             },
         }
@@ -211,7 +221,10 @@ impl XInterpMut for XProgram {
     fn interp(&self, _: &mut Self::Env) -> Self::Output {
         let mut env = Self::Env::new(self);
         let ret_env = Label!("main").interp(&mut env);
-        value(&XArgument::Reg(XRegister::RAX), &ret_env)
+        *ret_env
+            .printed
+            .get(0)
+            .unwrap_or(&value(&XArgument::Reg(XRegister::RAX), &ret_env))
     }
 }
 
@@ -277,90 +290,20 @@ fn pop(dst: &XArgument, env: &XEnv) -> XEnv {
 
 #[cfg(test)]
 mod test_xprog {
-    use std::{
-        fs::File,
-        io::{stderr, stdout, Write},
-        os::unix::process::ExitStatusExt,
-        path::Path,
-        process::{Command, Output},
-        vec,
-    };
-
-    use tempfile::tempdir;
 
     use super::XArgument::*;
     use super::XInstruction::*;
     use super::XRegister::*;
     use super::*;
-
-    fn compile_and_run(prog: &String) -> Result<i32, String> {
-        // Create new file with arg string
-        let dir = tempdir().expect("Failled to alocate temp dir");
-        println!("TempDir: {:?}", dir.as_ref());
-        let temp_file = dir.path().join("asm.s");
-        let runtime_path = Path::new("./src/xlang/runtime.c")
-            .canonicalize()
-            .expect("No runtime found");
-        let mut file = File::create(temp_file.clone()).expect("Failed to create temp file");
-        file.write_all(prog.as_bytes())
-            .expect("Failed to write asm to file");
-        // Assemble that file
-        let asmer = "gcc";
-        let temp_file_path = temp_file.as_path().to_str().unwrap();
-        let asm_args = &["-c", temp_file_path, runtime_path.to_str().unwrap(), "-g"];
-        let asm_res =
-            run_cmd_and_print(Command::new(asmer).current_dir(dir.as_ref()).args(asm_args));
-
-        match asm_res.status.code().unwrap() {
-            0 => println!("ASM Success"),
-            n => {
-                println!("ASM Failed with code {}", n);
-                stdout().write_all(&asm_res.stdout).unwrap();
-                stderr().write_all(&asm_res.stderr).unwrap();
-                return Err(format!("ASM Failed with code {}", n));
-            }
-        }
-
-        // Link that file
-        let linker = "gcc";
-        let linker_args = &["-o", "asm", "asm.o", "-g"];
-        let linker_res = run_cmd_and_print(
-            Command::new(linker)
-                .current_dir(dir.as_ref())
-                .args(linker_args),
-        );
-
-        match linker_res.status.code().unwrap() {
-            0 => println!("Link Success"),
-            n => {
-                println!("Link Failed with code {}", n);
-                stdout().write_all(&linker_res.stdout).unwrap();
-                stderr().write_all(&linker_res.stderr).unwrap();
-                return Err(format!("Link Failed with code {}", n));
-            }
-        }
-
-        // Run the resulting binary
-        let run_res = run_cmd_and_print(Command::new("./asm").current_dir(dir.as_ref()));
-
-        match run_res.status.code() {
-            Some(n) => Ok(n),
-            None => match run_res.status.signal() {
-                Some(sign) => Err(format!("Run Failure with sig {}", sign)),
-                None => Err("Run Unknown Failure".to_string()),
-            },
-        }
-    }
-    fn run_cmd_and_print(c: &mut Command) -> Output {
-        c.output().expect(&format!("CMD {:?} failed", c))
-    }
+    use crate::xlang::compile_and_run;
 
     #[test]
     fn test_emit() {
         assert_eq!(XRegister::R10.emit(), "%R10");
         assert_eq!(XArgument::Con(5).emit(), "$5");
         assert_eq!(XArgument::Reg(XRegister::RAX).emit(), "%RAX");
-        assert_eq!(XArgument::Deref(XRegister::RAX, 5).emit(), "%RAX(5)");
+        assert_eq!(XArgument::Deref(XRegister::RAX, 5).emit(), "5(%RAX)");
+        assert_eq!(XArgument::Deref(XRegister::RAX, 0).emit(), "(%RAX)");
     }
 
     fn get_test_progs() -> Vec<(XProgram, i64)> {

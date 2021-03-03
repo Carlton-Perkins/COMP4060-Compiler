@@ -84,6 +84,7 @@ mod test_patch_instructions {
                         Callq(Label!("_read_int")),
                         Movq(Reg(RAX), Deref(RBP, 0)),
                         Movq(Deref(RBP, 0), Reg(RAX)),
+                        Jmp(Label!("end")),
                     )
                 ),
                 XProgram!(
@@ -101,6 +102,7 @@ mod test_patch_instructions {
                         Callq(Label!("_read_int")),
                         Movq(Reg(RAX), Deref(RBP, 0)),
                         Movq(Deref(RBP, 0), Reg(RAX)),
+                        Jmp(Label!("end")),
                     )
                 ),
             ),
@@ -121,6 +123,7 @@ mod test_patch_instructions {
                         Movq(Deref(RBP, 8), Deref(RBP, 16)),
                         Addq(Deref(RBP, 0), Deref(RBP, 16)),
                         Movq(Deref(RBP, 16), Reg(RAX)),
+                        Jmp(Label!("end")),
                     )
                 ),
                 XProgram!(
@@ -141,6 +144,7 @@ mod test_patch_instructions {
                         Movq(Deref(RBP, 0), Reg(RAX)), // Move to temp first
                         Addq(Reg(RAX), Deref(RBP, 16)),
                         Movq(Deref(RBP, 16), Reg(RAX)),
+                        Jmp(Label!("end")),
                     )
                 ),
             ),

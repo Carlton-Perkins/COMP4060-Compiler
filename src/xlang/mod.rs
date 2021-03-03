@@ -9,3 +9,7 @@ pub use assign_homes::AssignHomes;
 #[allow(dead_code)]
 mod patch_instructions;
 pub use patch_instructions::PatchInstructions;
+
+#[allow(dead_code)]
+mod sys_asm;
+pub use sys_asm::{compile_and_run, CompileAndRun};

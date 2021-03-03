@@ -62,15 +62,16 @@ mod test_rrandp {
         clang::{CEnv, SelectInstruction, UncoverLocals},
         common::traits::InterpMut,
         rlang::{ECEnv, ExplicateControl, REnv, ResolveComplex, UEnv, Uniquify},
-        xlang::{AssignHomes, PatchInstructions, XEnv, XInterpMut},
+        xlang::{AssignHomes, CompileAndRun, PatchInstructions, XEnv, XInterpMut},
     };
 
     #[test]
     fn test_randp() {
         for depth in 0..10 {
-            for _ in 0..100 {
+            for _ in 0..10 {
                 // RLang
                 let e = randp(depth, &RandEnv::new());
+                println!("Program: {:?}", e);
                 let e_ret = e.interp(&mut REnv::new());
 
                 let u = e.uniquify(&mut UEnv::new());
@@ -102,6 +103,9 @@ mod test_rrandp {
                 let patch = asn.patch();
                 let patch_ret = patch.interp(&mut XEnv::new(&patch));
                 assert_eq!(e_ret, patch_ret);
+
+                let sys_res = patch.run();
+                assert_eq!(e_ret, sys_res);
             }
         }
     }
