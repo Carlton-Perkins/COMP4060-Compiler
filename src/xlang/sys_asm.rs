@@ -22,11 +22,8 @@ impl CompileAndRun for XProgram {
 }
 
 pub fn compile_and_run(prog: &String) -> Result<Number, String> {
-    println!("Program: \n{}", prog);
-
     // Create new file with arg string
     let dir = tempdir().expect("Failed to alocate temp dir");
-    println!("TempDir: {:?}", dir.as_ref());
     let temp_file = dir.path().join("asm.s");
     let runtime_path = Path::new("./src/xlang/runtime.c")
         .canonicalize()
