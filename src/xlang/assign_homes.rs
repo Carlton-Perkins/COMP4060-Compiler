@@ -101,7 +101,7 @@ fn is_even(v: usize) -> bool {
 #[cfg(test)]
 mod test_assign_homes {
     use super::*;
-    use crate::xlang::{XEnv, XInterpMut};
+    use crate::xlang::XInterpMut;
 
     #[test]
     fn test_assign_homes() {
@@ -185,12 +185,12 @@ mod test_assign_homes {
         ];
 
         for ((prog, info), expect_prog) in tests {
-            let prog_res = prog.interp(&mut XEnv::new(&prog));
-            let expected_prog_res = expect_prog.interp(&mut XEnv::new(&expect_prog));
+            let prog_res = prog.interp();
+            let expected_prog_res = expect_prog.interp();
             assert_eq!(prog_res, expected_prog_res);
 
             let asn = prog.asn_homes(&info);
-            let asn_res = asn.interp(&mut XEnv::new(&asn));
+            let asn_res = asn.interp();
             assert_eq!(prog_res, asn_res);
             assert_eq!(asn, expect_prog);
         }

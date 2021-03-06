@@ -1,45 +1,45 @@
 use compiler::{
-    clang::{CEnv, SelectInstruction, UncoverLocals},
+    clang::{SelectInstruction, UncoverLocals},
     common::traits::{Emit, InterpMut},
-    rlang::{randp, ECEnv, ExplicateControl, REnv, RandEnv, ResolveComplex, UEnv, Uniquify},
-    xlang::{AssignHomes, CompileAndRun, PatchInstructions, XEnv, XInterpMut},
+    rlang::{randp, ExplicateControl, ResolveComplex, Uniquify},
+    xlang::{AssignHomes, CompileAndRun, PatchInstructions, XInterpMut},
 };
 
 fn main() {
     let depth = 3;
     // RLang
-    let e = randp(depth, &RandEnv::new());
+    let e = randp(depth);
     println!("RProgram: \n\n{:?}\n", e);
-    let e_ret = e.interp(&mut REnv::new());
+    let e_ret = e.interp();
 
-    let u = e.uniquify(&mut UEnv::new());
-    let u_ret = u.interp(&mut REnv::new());
+    let u = e.uniquify();
+    let u_ret = u.interp();
     assert_eq!(e_ret, u_ret);
 
     let rco = u.resolve_complex();
-    let rco_ret = rco.interp(&mut REnv::new());
+    let rco_ret = rco.interp();
     assert_eq!(e_ret, rco_ret);
 
-    let econ = rco.explicate_control(ECEnv::new());
-    let econ_ret = econ.interp(&mut CEnv::new(&econ));
+    let econ = rco.explicate_control();
+    let econ_ret = econ.interp();
     assert_eq!(e_ret, econ_ret);
 
     // CLang
     let (ul, local_info) = econ.uncover_locals();
-    let ul_ret = ul.interp(&mut CEnv::new(&ul));
+    let ul_ret = ul.interp();
     assert_eq!(e_ret, ul_ret);
 
     let sel_inst = ul.select_instr();
-    let sel_inst_ret = sel_inst.interp(&mut XEnv::new(&sel_inst));
+    let sel_inst_ret = sel_inst.interp();
     assert_eq!(e_ret, sel_inst_ret);
 
     // XLang
     let asn = sel_inst.asn_homes(&local_info);
-    let asn_ret = asn.interp(&mut XEnv::new(&asn));
+    let asn_ret = asn.interp();
     assert_eq!(e_ret, asn_ret);
 
     let patch = asn.patch();
-    let patch_ret = patch.interp(&mut XEnv::new(&patch));
+    let patch_ret = patch.interp();
     assert_eq!(e_ret, patch_ret);
 
     let sys_res = patch.run();

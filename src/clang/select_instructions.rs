@@ -58,13 +58,12 @@ fn select_expr(dst: &XArgument, src: &CExpression) -> XBlock {
 
 #[cfg(test)]
 mod test_select_instruction {
-    use std::collections::HashMap;
 
     use super::*;
     use crate::{
-        clang::{CArgument::Num, CEnv, CExpression::*, CTail::*},
+        clang::{CArgument::Num, CExpression::*, CTail::*},
         common::traits::InterpMut,
-        xlang::{XArgument::*, XEnv, XInstruction::*, XInterpMut},
+        xlang::{XArgument::*, XInstruction::*, XInterpMut},
     };
 
     #[test]
@@ -132,10 +131,10 @@ mod test_select_instruction {
         ];
 
         for (cprog, expected_xprog) in tests {
-            let c_res = cprog.interp(&mut CEnv::new(&cprog));
+            let c_res = cprog.interp();
             let xprog = cprog.select_instr();
-            let x_expected_res = expected_xprog.interp(&mut XEnv::new(&HashMap::new()));
-            let x_res = xprog.interp(&mut XEnv::new(&HashMap::new()));
+            let x_expected_res = expected_xprog.interp();
+            let x_res = xprog.interp();
 
             assert_eq!(xprog, expected_xprog);
             assert_eq!(c_res, x_expected_res);

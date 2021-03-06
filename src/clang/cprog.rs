@@ -53,14 +53,18 @@ impl InterpMut for Label {
     type Env = CEnv;
     type Output = Number;
 
-    fn interp(&self, env: &mut Self::Env) -> Self::Output {
+    fn interp(&self) -> Self::Output {
+        unimplemented!()
+    }
+
+    fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         let target = env
             .clone()
             .block_map
             .get(self)
             .expect(format!("Program should have label {}, but does not", self).as_str())
             .clone();
-        target.interp(env)
+        target.interp_(env)
     }
 }
 
@@ -68,8 +72,13 @@ impl InterpMut for CProgram {
     type Env = CEnv;
     type Output = Number;
 
-    fn interp(&self, mut env: &mut Self::Env) -> Self::Output {
-        Label!("main").interp(&mut env)
+    fn interp(&self) -> Self::Output {
+        let mut env = CEnv::new(self);
+        self.interp_(&mut env)
+    }
+
+    fn interp_(&self, mut env: &mut Self::Env) -> Self::Output {
+        Label!("main").interp_(&mut env)
     }
 }
 
@@ -77,14 +86,18 @@ impl InterpMut for CTail {
     type Env = CEnv;
     type Output = Number;
 
-    fn interp(&self, env: &mut Self::Env) -> Self::Output {
+    fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            CTail::Return(ret) => ret.interp(env),
+            CTail::Return(ret) => ret.interp_(env),
             CTail::Seq(ex, rest) => {
-                ex.interp(env);
-                rest.interp(env)
+                ex.interp_(env);
+                rest.interp_(env)
             }
         }
+    }
+
+    fn interp(&self) -> Self::Output {
+        todo!()
     }
 }
 
@@ -92,14 +105,18 @@ impl InterpMut for CStatement {
     type Env = CEnv;
     type Output = Number;
 
-    fn interp(&self, env: &mut Self::Env) -> Self::Output {
+    fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             CStatement::Set(v, ex) => {
-                let val = ex.interp(env);
+                let val = ex.interp_(env);
                 env.var_map.insert(v.into(), val);
                 val
             }
         }
+    }
+
+    fn interp(&self) -> Self::Output {
+        unimplemented!()
     }
 }
 
@@ -107,11 +124,15 @@ impl InterpMut for CArgument {
     type Env = CEnv;
     type Output = Number;
 
-    fn interp(&self, env: &mut Self::Env) -> Self::Output {
+    fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             CArgument::Num(n) => *n,
             CArgument::Var(v) => *env.var_map.get(v).expect("Undefined variable"),
         }
+    }
+
+    fn interp(&self) -> Self::Output {
+        unimplemented!()
     }
 }
 
@@ -119,17 +140,21 @@ impl InterpMut for CExpression {
     type Env = CEnv;
     type Output = Number;
 
-    fn interp(&self, env: &mut Self::Env) -> Self::Output {
+    fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            CExpression::Arg(a) => a.interp(env),
+            CExpression::Arg(a) => a.interp_(env),
             CExpression::Read => {
                 let count = env.read_count;
                 env.read_count += 1;
                 count as Number
             }
-            CExpression::Negate(ex) => -1 * ex.interp(env),
-            CExpression::Add(lh, rh) => lh.interp(env) + rh.interp(env),
+            CExpression::Negate(ex) => -1 * ex.interp_(env),
+            CExpression::Add(lh, rh) => lh.interp_(env) + rh.interp_(env),
         }
+    }
+
+    fn interp(&self) -> Self::Output {
+        unimplemented!()
     }
 }
 
@@ -224,7 +249,7 @@ mod test_cprog {
         ];
 
         for (test_program, expected_res) in test_progs {
-            let res = test_program.interp(&mut CEnv::new(&test_program));
+            let res = test_program.interp();
 
             assert_eq!(
                 res, expected_res,
@@ -251,7 +276,7 @@ mod test_cprog {
         )];
 
         for (test_program, expected_res) in test_progs {
-            let res = test_program.interp(&mut CEnv::new(&test_program));
+            let res = test_program.interp();
 
             assert_eq!(
                 res, expected_res,

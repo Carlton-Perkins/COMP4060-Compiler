@@ -46,7 +46,7 @@ impl InterpMut for RExpr {
     type Env = REnv;
     type Output = Number;
 
-    fn interp(&self, env: &mut Self::Env) -> Self::Output {
+    fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             RNum(n) => *n,
             RRead => {
@@ -54,18 +54,22 @@ impl InterpMut for RExpr {
                 env.read_count += 1;
                 res
             }
-            RNegate(ex) => -1 * ex.interp(env),
-            RAdd(lh, rh) => lh.interp(env) + rh.interp(env),
+            RNegate(ex) => -1 * ex.interp_(env),
+            RAdd(lh, rh) => lh.interp_(env) + rh.interp_(env),
             RLet(v, ve, be) => {
-                let value = ve.interp(env);
+                let value = ve.interp_(env);
                 env.vars.insert(v.clone(), value);
-                be.interp(env)
+                be.interp_(env)
             }
             RVar(n) => *env
                 .vars
                 .get(n)
                 .expect(format!("RInterp: Unbound variable {:?}", n).as_str()),
         }
+    }
+
+    fn interp(&self) -> Self::Output {
+        self.interp_(&mut REnv::new())
     }
 }
 
@@ -74,7 +78,7 @@ mod test_rprog {
     use super::*;
 
     fn a_interp(expr: RProgram, expect: Number) {
-        let res = expr.interp(&mut REnv::new());
+        let res = expr.interp();
         assert_eq!(
             res, expect,
             "Program {:?} does not eval to {}, but instead {}",

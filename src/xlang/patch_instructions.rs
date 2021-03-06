@@ -63,7 +63,7 @@ impl DoPatch for XInstruction {
 #[cfg(test)]
 mod test_patch_instructions {
     use super::*;
-    use crate::xlang::{XEnv, XInterpMut};
+    use crate::xlang::XInterpMut;
 
     #[test]
     fn test_patch() {
@@ -151,12 +151,12 @@ mod test_patch_instructions {
         ];
 
         for (prog, expect_prog) in tests {
-            let prog_res = prog.interp(&mut XEnv::new(&prog));
-            let expected_prog_res = expect_prog.interp(&mut XEnv::new(&expect_prog));
+            let prog_res = prog.interp();
+            let expected_prog_res = expect_prog.interp();
             assert_eq!(prog_res, expected_prog_res);
 
             let patch = prog.patch();
-            let patch_res = patch.interp(&mut XEnv::new(&patch));
+            let patch_res = patch.interp();
             assert_eq!(prog_res, patch_res);
             assert_eq!(patch, expect_prog);
         }

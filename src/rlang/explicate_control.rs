@@ -12,12 +12,17 @@ impl ECEnv {
 }
 
 pub trait ExplicateControl {
-    fn explicate_control(&self, env: ECEnv) -> CProgram;
+    fn explicate_control(&self) -> CProgram;
+    fn explicate_control_(&self, env: ECEnv) -> CProgram;
 }
 
 impl ExplicateControl for RProgram {
-    fn explicate_control(&self, _: ECEnv) -> CProgram {
+    fn explicate_control_(&self, _: ECEnv) -> CProgram {
         vec![(Label!("main"), econ_t(self))].into_iter().collect()
+    }
+
+    fn explicate_control(&self) -> CProgram {
+        self.explicate_control_(ECEnv::new())
     }
 }
 
@@ -51,11 +56,7 @@ fn econ_t(tail: &RExpr) -> CTail {
 mod test_econ {
 
     use super::*;
-    use crate::{
-        clang::CEnv,
-        common::{traits::InterpMut, types::Number},
-        rlang::REnv,
-    };
+    use crate::common::{traits::InterpMut, types::Number};
 
     // Where RProgram is RCO'ed style
     type Test = (RProgram, Number);
@@ -98,9 +99,9 @@ mod test_econ {
 
         for (rp, expected_res) in tests {
             println!("Econ: {:?}", rp);
-            let rp_res = rp.interp(&mut REnv::new());
-            let cp = rp.explicate_control(ECEnv::new());
-            let cp_res = cp.interp(&mut CEnv::new(&cp));
+            let rp_res = rp.interp();
+            let cp = rp.explicate_control();
+            let cp_res = cp.interp();
 
             assert_eq!(rp_res, expected_res, "RProgram does not evaluate correctly");
             assert_eq!(

@@ -15,7 +15,11 @@ impl RandEnv {
     }
 }
 
-pub fn randp(depth: usize, env: &RandEnv) -> RExpr {
+pub fn randp(depth: usize) -> RExpr {
+    randp_(depth, &RandEnv::new())
+}
+
+fn randp_(depth: usize, env: &RandEnv) -> RExpr {
     type DoType = Box<dyn Fn(usize, &RandEnv) -> RExpr>;
     let do_read = |_: usize, _: &RandEnv| -> RExpr { RRead };
     let do_num = |_: usize, _: &RandEnv| -> RExpr { RNum(random::<i8>() as i64) };
@@ -30,20 +34,20 @@ pub fn randp(depth: usize, env: &RandEnv) -> RExpr {
 
     let do_add = |depth: usize, env: &RandEnv| -> RExpr {
         RAdd(
-            Box::new(randp(depth - 1, env)),
-            Box::new(randp(depth - 1, env)),
+            Box::new(randp_(depth - 1, env)),
+            Box::new(randp_(depth - 1, env)),
         )
     };
     let do_negate =
-        |depth: usize, env: &RandEnv| -> RExpr { RNegate(Box::new(randp(depth - 1, env))) };
+        |depth: usize, env: &RandEnv| -> RExpr { RNegate(Box::new(randp_(depth - 1, env))) };
     let do_let = |depth: usize, env: &RandEnv| -> RExpr {
         let mut new_env = env.clone();
         let new_var = new_env.vars.len().to_string();
         new_env.vars.push(new_var.clone());
         RLet(
             new_var,
-            Box::new(randp(depth - 1, env)),
-            Box::new(randp(depth - 1, &new_env)),
+            Box::new(randp_(depth - 1, env)),
+            Box::new(randp_(depth - 1, &new_env)),
         )
     };
     let do_dn: Vec<DoType> = vec![Box::new(do_add), Box::new(do_negate), Box::new(do_let)];
@@ -62,10 +66,10 @@ mod test_rrandp {
 
     use super::*;
     use crate::{
-        clang::{CEnv, SelectInstruction, UncoverLocals},
+        clang::{SelectInstruction, UncoverLocals},
         common::traits::InterpMut,
-        rlang::{ECEnv, ExplicateControl, REnv, ResolveComplex, UEnv, Uniquify},
-        xlang::{AssignHomes, CompileAndRun, PatchInstructions, XEnv, XInterpMut},
+        rlang::{ExplicateControl, ResolveComplex, Uniquify},
+        xlang::{AssignHomes, CompileAndRun, PatchInstructions, XInterpMut},
     };
 
     #[test]
@@ -82,38 +86,38 @@ mod test_rrandp {
 
     fn test_random_program(depth: usize) {
         // RLang
-        let e = randp(depth, &RandEnv::new());
+        let e = randp(depth);
         println!("Program: {:?}", e);
-        let e_ret = e.interp(&mut REnv::new());
+        let e_ret = e.interp();
 
-        let u = e.uniquify(&mut UEnv::new());
-        let u_ret = u.interp(&mut REnv::new());
+        let u = e.uniquify();
+        let u_ret = u.interp();
         assert_eq!(e_ret, u_ret);
 
         let rco = u.resolve_complex();
-        let rco_ret = rco.interp(&mut REnv::new());
+        let rco_ret = rco.interp();
         assert_eq!(e_ret, rco_ret);
 
-        let econ = rco.explicate_control(ECEnv::new());
-        let econ_ret = econ.interp(&mut CEnv::new(&econ));
+        let econ = rco.explicate_control();
+        let econ_ret = econ.interp();
         assert_eq!(e_ret, econ_ret);
 
         // CLang
         let (ul, local_info) = econ.uncover_locals();
-        let ul_ret = ul.interp(&mut CEnv::new(&ul));
+        let ul_ret = ul.interp();
         assert_eq!(e_ret, ul_ret);
 
         let sel_inst = ul.select_instr();
-        let sel_inst_ret = sel_inst.interp(&mut XEnv::new(&sel_inst));
+        let sel_inst_ret = sel_inst.interp();
         assert_eq!(e_ret, sel_inst_ret);
 
         // XLang
         let asn = sel_inst.asn_homes(&local_info);
-        let asn_ret = asn.interp(&mut XEnv::new(&asn));
+        let asn_ret = asn.interp();
         assert_eq!(e_ret, asn_ret);
 
         let patch = asn.patch();
-        let patch_ret = patch.interp(&mut XEnv::new(&patch));
+        let patch_ret = patch.interp();
         assert_eq!(e_ret, patch_ret);
 
         let sys_res = patch.run();

@@ -23,12 +23,12 @@ impl OptEnv {
 impl Opt for RExpr {
     type Env = OptEnv;
 
-    fn opt(&self, env: &Self::Env) -> Self {
+    fn opt_(&self, env: &Self::Env) -> Self {
         match self {
             RNum(_) => self.clone(),
             RRead => self.clone(),
             RNegate(ex) => {
-                let o = ex.opt(env);
+                let o = ex.opt_(env);
                 match o {
                     RNum(n) => RNum(-1 * n),
                     RRead => RNegate(Box::new(o)),
@@ -38,7 +38,7 @@ impl Opt for RExpr {
                 }
             }
             RAdd(le, re) => {
-                let o = (le.opt(env), re.opt(env));
+                let o = (le.opt_(env), re.opt_(env));
                 match o.clone() {
                     (RNum(l), RNum(r)) => RNum(l + r),
                     (RNum(l), RAdd(r1, r2)) => match *r1 {
@@ -58,13 +58,13 @@ impl Opt for RExpr {
                 }
             }
             RLet(id, ve, be) => {
-                let o_ve = ve.opt(env);
+                let o_ve = ve.opt_(env);
                 if o_ve.is_pure() {
                     let mut new_env = env.clone();
                     new_env.vars.insert(id.clone(), o_ve);
-                    be.opt(&new_env)
+                    be.opt_(&new_env)
                 } else {
-                    let o_be = be.opt(env);
+                    let o_be = be.opt_(env);
                     RLet(id.clone(), Box::new(o_ve), Box::new(o_be))
                 }
             }
@@ -74,21 +74,22 @@ impl Opt for RExpr {
             },
         }
     }
+
+    fn opt(&self) -> Self {
+        self.opt_(&OptEnv::new())
+    }
 }
 
 #[cfg(test)]
 mod test_ropt {
     use super::*;
-    use crate::{
-        common::traits::InterpMut,
-        rlang::{randp, REnv, RandEnv},
-    };
+    use crate::{common::traits::InterpMut, rlang::randp};
 
     fn a_opt(e: RExpr, expected_opt: RExpr, expected_result: i64) {
         println!("{:?}", e);
-        let e_res = e.interp(&mut REnv::new());
-        let opt = e.opt(&OptEnv::new());
-        let opt_res = opt.interp(&mut REnv::new());
+        let e_res = e.interp();
+        let opt = e.opt();
+        let opt_res = opt.interp();
 
         assert_eq!(
             opt, expected_opt,
@@ -188,10 +189,10 @@ mod test_ropt {
     fn test_randp_opt() {
         for depth in 0..10 {
             for _ in 0..100 {
-                let e = randp(depth, &RandEnv::new());
-                let e_res = e.interp(&mut REnv::new());
-                let opt = e.opt(&OptEnv::new());
-                let opt_res = opt.interp(&mut REnv::new());
+                let e = randp(depth);
+                let e_res = e.interp();
+                let opt = e.opt();
+                let opt_res = opt.interp();
 
                 assert_eq!(e_res, opt_res, "'{:?}' does not equal '{:?}'", e, opt);
             }

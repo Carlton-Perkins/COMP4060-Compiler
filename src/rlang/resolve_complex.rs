@@ -102,7 +102,7 @@ mod test_rco {
     use super::*;
     use crate::{
         common::{traits::InterpMut, types::Number},
-        rlang::{REnv, UEnv, Uniquify},
+        rlang::Uniquify,
     };
 
     type Test = (RProgram, RProgram, Number);
@@ -205,10 +205,10 @@ mod test_rco {
 
         for (start, expected_rco, expected_res) in tests {
             println!("Running RCO {:?}", start);
-            let start_res = start.interp(&mut REnv::new());
-            let uni = start.uniquify(&mut UEnv::new());
+            let start_res = start.interp();
+            let uni = start.uniquify();
             let rco = uni.resolve_complex();
-            let rco_res = rco.interp(&mut REnv::new());
+            let rco_res = rco.interp();
 
             assert_eq!(
                 start_res, expected_res,

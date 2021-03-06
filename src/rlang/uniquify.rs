@@ -6,7 +6,9 @@ use crate::rlang::rprog::{RExpr, RProgram};
 pub trait Uniquify {
     type Env;
     type Output;
-    fn uniquify(&self, env: &mut Self::Env) -> Self::Output;
+
+    fn uniquify(&self) -> Self::Output;
+    fn uniquify_(&self, env: &mut Self::Env) -> Self::Output;
 }
 
 #[derive(Clone)]
@@ -28,20 +30,20 @@ impl Uniquify for RProgram {
     type Env = UEnv;
     type Output = RProgram;
 
-    fn uniquify(&self, env: &mut Self::Env) -> Self::Output {
+    fn uniquify_(&self, env: &mut Self::Env) -> Self::Output {
         use RExpr::*;
         match self {
             RNum(_) => self.clone(),
             RRead => self.clone(),
-            RNegate(ex) => RNegate(Box::new(ex.uniquify(env))),
-            RAdd(lh, rh) => RAdd(Box::new(lh.uniquify(env)), Box::new(rh.uniquify(env))),
+            RNegate(ex) => RNegate(Box::new(ex.uniquify_(env))),
+            RAdd(lh, rh) => RAdd(Box::new(lh.uniquify_(env)), Box::new(rh.uniquify_(env))),
             RLet(v, ve, be) => {
                 let nv = format!("u{}", env.var_counter);
                 env.var_counter += 1;
-                let nve = ve.uniquify(env);
+                let nve = ve.uniquify_(env);
 
                 env.var_map.insert(v.into(), nv.clone());
-                let nbe = be.uniquify(env);
+                let nbe = be.uniquify_(env);
 
                 RLet(nv, Box::new(nve), Box::new(nbe))
             }
@@ -51,23 +53,26 @@ impl Uniquify for RProgram {
             },
         }
     }
+
+    fn uniquify(&self) -> Self::Output {
+        self.uniquify_(&mut UEnv::new())
+    }
 }
 
 #[cfg(test)]
 mod test_uniquify {
     use super::*;
     use crate::common::traits::InterpMut;
-    use crate::rlang::REnv;
-    use crate::rlang::{randp, RandEnv};
+    use crate::rlang::randp;
     use crate::{common::types::Number, rlang::RExpr::*};
 
     type Test = (RProgram, RProgram, Number);
     type Tests = Vec<Test>;
 
     fn a_uni((start_program, expected_uni_program, expected_res): Test) {
-        let uni_program = start_program.uniquify(&mut UEnv::new());
-        let uni_res = uni_program.interp(&mut REnv::new());
-        let start_res = start_program.interp(&mut REnv::new());
+        let uni_program = start_program.uniquify();
+        let uni_res = uni_program.interp();
+        let start_res = start_program.interp();
 
         assert_eq!(
             start_res, expected_res,
@@ -158,10 +163,10 @@ mod test_uniquify {
     fn test_uniquify_randp() {
         for depth in 0..10 {
             for _ in 0..100 {
-                let program = randp(depth, &RandEnv::new());
-                let program_res = program.interp(&mut REnv::new());
-                let uni = program.uniquify(&mut UEnv::new());
-                let unit_res = uni.interp(&mut REnv::new());
+                let program = randp(depth);
+                let program_res = program.interp();
+                let uni = program.uniquify();
+                let unit_res = uni.interp();
 
                 assert_eq!(program_res, unit_res)
             }

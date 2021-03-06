@@ -9,13 +9,15 @@ pub trait InterpMut {
     type Env;
     type Output;
 
-    fn interp(&self, env: &mut Self::Env) -> Self::Output;
+    fn interp(&self) -> Self::Output;
+    fn interp_(&self, env: &mut Self::Env) -> Self::Output;
 }
 
 pub trait Opt {
     type Env;
 
-    fn opt(&self, env: &Self::Env) -> Self;
+    fn opt(&self) -> Self;
+    fn opt_(&self, env: &Self::Env) -> Self;
 }
 
 pub trait IsPure {

@@ -14,7 +14,8 @@ pub trait XInterpMut {
     type Env;
     type Output;
 
-    fn interp(&self, env: &mut Self::Env) -> Self::Output;
+    fn interp(&self) -> Self::Output;
+    fn interp_(&self, env: &mut Self::Env) -> Self::Output;
 }
 
 #[derive(Clone)]
@@ -155,10 +156,10 @@ impl XInterpMut for Label {
     type Env = XEnv;
     type Output = XEnv;
 
-    fn interp(&self, env: &mut Self::Env) -> Self::Output {
+    fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         let get = env.block.get(self).clone();
         match get {
-            Some(blk) => blk.clone().interp(env),
+            Some(blk) => blk.clone().interp_(env),
             None => match self.as_str() {
                 "_read_int" => {
                     let blk = vec![XInstruction::Movq(
@@ -166,7 +167,7 @@ impl XInterpMut for Label {
                         XArgument::Reg(XRegister::RAX),
                     )];
                     env.readc += 1;
-                    blk.interp(env)
+                    blk.interp_(env)
                 }
                 "_print_int" => {
                     env.printed
@@ -177,24 +178,32 @@ impl XInterpMut for Label {
             },
         }
     }
+
+    fn interp(&self) -> Self::Output {
+        unimplemented!()
+    }
 }
 
 impl XInterpMut for XInstruction {
     type Env = XEnv;
     type Output = XEnv;
 
-    fn interp(&self, env: &mut Self::Env) -> Self::Output {
+    fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             XInstruction::Addq(src, dst) => set(dst, &(value(src, env) + value(dst, env)), env),
             XInstruction::Subq(src, dst) => set(dst, &(value(src, env) - value(dst, env)), env),
             XInstruction::Movq(src, dst) => set(dst, &value(src, env), env),
             XInstruction::Retq => env.clone(),
             XInstruction::Negq(v) => set(v, &(-1 * value(v, env)), env),
-            XInstruction::Callq(l) => l.interp(env),
-            XInstruction::Jmp(l) => l.interp(env),
+            XInstruction::Callq(l) => l.interp_(env),
+            XInstruction::Jmp(l) => l.interp_(env),
             XInstruction::Pushq(src) => push(src, env),
             XInstruction::Popq(dst) => pop(dst, env),
         }
+    }
+
+    fn interp(&self) -> Self::Output {
+        unimplemented!()
     }
 }
 
@@ -202,15 +211,19 @@ impl XInterpMut for XBlock {
     type Env = XEnv;
     type Output = XEnv;
 
-    fn interp(&self, mut env: &mut Self::Env) -> Self::Output {
+    fn interp_(&self, mut env: &mut Self::Env) -> Self::Output {
         match self.split_first() {
             Some((first, rest)) => rest
                 .into_iter()
                 .map(|x| x.clone())
                 .collect::<XBlock>()
-                .interp(&mut first.interp(&mut env)),
+                .interp_(&mut first.interp_(&mut env)),
             None => env.clone(),
         }
+    }
+
+    fn interp(&self) -> Self::Output {
+        unimplemented!()
     }
 }
 
@@ -218,13 +231,16 @@ impl XInterpMut for XProgram {
     type Env = XEnv;
     type Output = Number;
 
-    fn interp(&self, _: &mut Self::Env) -> Self::Output {
-        let mut env = Self::Env::new(self);
-        let ret_env = Label!("main").interp(&mut env);
+    fn interp_(&self, mut env: &mut Self::Env) -> Self::Output {
+        let ret_env = Label!("main").interp_(&mut env);
         *ret_env
             .printed
             .get(0)
             .unwrap_or(&value(&XArgument::Reg(XRegister::RAX), &ret_env))
+    }
+
+    fn interp(&self) -> Self::Output {
+        self.interp_(&mut XEnv::new(&self.clone()))
     }
 }
 
@@ -364,8 +380,7 @@ mod test_xprog {
     fn test_xprog() {
         for (test_prog, expected_res) in get_test_progs() {
             let c_res = compile_and_run(&test_prog.emit());
-            let mut interp_env = XEnv::new(&HashMap::new());
-            let i_res = test_prog.interp(&mut interp_env);
+            let i_res = test_prog.interp();
 
             assert_eq!(i_res, expected_res);
 
@@ -399,8 +414,7 @@ mod test_xprog {
     #[test]
     fn test_xprog_interp() {
         for (test_prog, expected_res) in get_test_progs() {
-            let mut interp_env = XEnv::new(&HashMap::new());
-            let res = test_prog.interp(&mut interp_env);
+            let res = test_prog.interp();
 
             assert_eq!(
                 res, expected_res,
