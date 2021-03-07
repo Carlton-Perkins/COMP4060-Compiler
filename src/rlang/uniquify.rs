@@ -71,8 +71,8 @@ mod test_uniquify {
 
     fn a_uni((start_program, expected_uni_program, expected_res): Test) {
         let uni_program = start_program.uniquify();
-        let uni_res = uni_program.interp();
-        let start_res = start_program.interp();
+        let uni_res = uni_program.interp().unwrap();
+        let start_res = start_program.interp().unwrap();
 
         assert_eq!(
             start_res, expected_res,

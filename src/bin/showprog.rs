@@ -10,14 +10,14 @@ fn main() {
     // RLang
     let e = randp(depth);
     println!("RProgram: \n\n{:?}\n", e);
-    let e_ret = e.interp();
+    let e_ret = e.interp().unwrap();
 
     let u = e.uniquify();
-    let u_ret = u.interp();
+    let u_ret = u.interp().unwrap();
     assert_eq!(e_ret, u_ret);
 
     let rco = u.resolve_complex();
-    let rco_ret = rco.interp();
+    let rco_ret = rco.interp().unwrap();
     assert_eq!(e_ret, rco_ret);
 
     let econ = rco.explicate_control();

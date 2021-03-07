@@ -99,7 +99,7 @@ mod test_econ {
 
         for (rp, expected_res) in tests {
             println!("Econ: {:?}", rp);
-            let rp_res = rp.interp();
+            let rp_res = rp.interp().unwrap();
             let cp = rp.explicate_control();
             let cp_res = cp.interp();
 

@@ -44,27 +44,27 @@ impl IsPure for RExpr {
 
 impl InterpMut for RExpr {
     type Env = REnv;
-    type Output = Number;
+    type Output = Result<Number, String>;
 
     fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            RNum(n) => *n,
+            RNum(n) => Ok(*n),
             RRead => {
                 let res = env.read_count as i64;
                 env.read_count += 1;
-                res
+                Ok(res)
             }
-            RNegate(ex) => -1 * ex.interp_(env),
-            RAdd(lh, rh) => lh.interp_(env) + rh.interp_(env),
+            RNegate(ex) => Ok(-1 * ex.interp_(env)?),
+            RAdd(lh, rh) => Ok(lh.interp_(env)? + rh.interp_(env)?),
             RLet(v, ve, be) => {
-                let value = ve.interp_(env);
+                let value = ve.interp_(env)?;
                 env.vars.insert(v.clone(), value);
                 be.interp_(env)
             }
-            RVar(n) => *env
-                .vars
-                .get(n)
-                .expect(format!("RInterp: Unbound variable {:?}", n).as_str()),
+            RVar(n) => match env.vars.get(n) {
+                Some(var) => Ok(*var),
+                None => Err(format!("RInterp: Unbound variable {:?}", n)),
+            },
         }
     }
 
@@ -78,12 +78,19 @@ mod test_rprog {
     use super::*;
 
     fn a_interp(expr: RProgram, expect: Number) {
-        let res = expr.interp();
-        assert_eq!(
-            res, expect,
-            "Program {:?} does not eval to {}, but instead {}",
-            expr, expect, res
-        );
+        let res_opt = expr.interp();
+        match res_opt {
+            Ok(res) => {
+                assert_eq!(
+                    res, expect,
+                    "Program {:?} does not eval to {}, but instead {}",
+                    expr, expect, res
+                );
+            }
+            Err(err_string) => {
+                assert!(false, "Program {:?} failed to interp, {}", expr, err_string)
+            }
+        }
     }
 
     fn a_interp_all(vec: Vec<(RProgram, Number)>) {
@@ -186,6 +193,15 @@ mod test_rprog {
         ];
 
         a_interp_all(tests);
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "called `Result::unwrap()` on an `Err` value: \"RInterp: Unbound variable \\\"0\\\"\""
+    )]
+    fn test_r1_unbound_var() {
+        let prog = RVar!("0");
+        prog.interp().unwrap();
     }
 
     fn two_n(n: usize) -> RExpr {

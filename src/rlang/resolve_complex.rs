@@ -205,10 +205,10 @@ mod test_rco {
 
         for (start, expected_rco, expected_res) in tests {
             println!("Running RCO {:?}", start);
-            let start_res = start.interp();
+            let start_res = start.interp().unwrap();
             let uni = start.uniquify();
             let rco = uni.resolve_complex();
-            let rco_res = rco.interp();
+            let rco_res = rco.interp().unwrap();
 
             assert_eq!(
                 start_res, expected_res,

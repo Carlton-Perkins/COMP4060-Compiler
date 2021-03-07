@@ -87,9 +87,9 @@ mod test_ropt {
 
     fn a_opt(e: RExpr, expected_opt: RExpr, expected_result: i64) {
         println!("{:?}", e);
-        let e_res = e.interp();
+        let e_res = e.interp().unwrap();
         let opt = e.opt();
-        let opt_res = opt.interp();
+        let opt_res = opt.interp().unwrap();
 
         assert_eq!(
             opt, expected_opt,
