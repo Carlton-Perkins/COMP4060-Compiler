@@ -1,8 +1,8 @@
 use super::{XArgument, XBlock, XInstruction};
 use crate::clang::LocalsInfo;
 use crate::common::types::{Label, Number};
+use crate::xlang::{Allocator, StupidStackAllocator};
 use crate::xlang::{XArgument::*, XInstruction::*, XProgram, XRegister::*};
-use itertools::Itertools;
 use std::collections::HashMap;
 
 pub trait AssignHomes {
@@ -15,24 +15,10 @@ trait Asn {
 
 impl AssignHomes for XProgram {
     fn asn_homes(&self, linfo: &LocalsInfo) -> XProgram {
-        let var_count = linfo.len();
-        let stack_space = 8
-            * (if is_even(var_count) {
-                var_count
-            } else {
-                var_count + 1
-            });
-        println!("Linfo {:?}", linfo);
-        let renames = linfo
-            .into_iter()
-            .collect::<Vec<&String>>() // Need to ensure known ordering, so sort first
-            .into_iter()
-            .sorted_by_key(|x| x.clone())
-            .into_iter()
-            .enumerate()
-            .map(|(idx, label)| (label.clone(), Deref(RBP, (-8 * idx as isize) as i64)))
-            .collect();
-        println!("Renames {:?}", renames);
+        let allocator = StupidStackAllocator::allocate(self, linfo);
+        let renames = allocator.variable_mapping;
+        let stack_space = allocator.stack_space;
+
         let new_main = XBlock!(
             "main",
             Pushq(Reg(RBP)),
@@ -89,10 +75,6 @@ impl Asn for XArgument {
             Var(v) => renames.get(v).unwrap().clone(),
         }
     }
-}
-
-fn is_even(v: usize) -> bool {
-    v % 2 == 0
 }
 
 #[cfg(test)]

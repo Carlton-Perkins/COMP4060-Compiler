@@ -13,3 +13,7 @@ pub use patch_instructions::PatchInstructions;
 #[allow(dead_code)]
 mod sys_asm;
 pub use sys_asm::{compile_and_run, CompileAndRun};
+
+#[allow(dead_code)]
+mod allocation;
+pub use allocation::{Allocation, Allocator, StupidStackAllocator};
