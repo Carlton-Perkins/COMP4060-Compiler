@@ -1,8 +1,11 @@
-use super::{XArgument, XBlock, XInstruction};
-use crate::clang::LocalsInfo;
-use crate::common::types::{Label, Number};
-use crate::xlang::{Allocator, StupidStackAllocator};
-use crate::xlang::{XArgument::*, XInstruction::*, XProgram, XRegister::*};
+use crate::{
+    clang::LocalsInfo,
+    common::types::{Label, Number},
+    xlang::{
+        Allocator, StupidStackAllocator, XArgument, XArgument::*, XBlock, XInstruction,
+        XInstruction::*, XProgram, XRegister::*,
+    },
+};
 use std::collections::HashMap;
 
 pub trait AssignHomes {

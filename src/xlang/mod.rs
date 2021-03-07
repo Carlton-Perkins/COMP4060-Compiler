@@ -17,3 +17,6 @@ pub use sys_asm::{compile_and_run, CompileAndRun};
 #[allow(dead_code)]
 mod allocation;
 pub use allocation::{Allocation, Allocator, StupidStackAllocator};
+
+#[allow(dead_code)]
+mod uncover_live;

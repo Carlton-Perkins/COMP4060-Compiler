@@ -48,7 +48,7 @@ x 2021-03-01 Connect patch-instructions to your test suite.
 x 2021-03-02 Implement your language runtime.
 x 2021-03-02 Implement the main-generation pass for X0 programs.
 x 2021-03-02 Connect your test suite to your system assembler and language runtime.
-Write a dozen tests for uncover-live that predict its output.
+x 2021-03-07 Write a dozen tests for uncover-live that predict its output.
 Implement the uncover-live pass for X0 programs.
 Write a dozen tests for build-interferences that predict its output.
 Implement the build-interferences pass for X0 programs.
