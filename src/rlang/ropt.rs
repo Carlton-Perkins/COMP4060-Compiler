@@ -84,6 +84,7 @@ impl Opt for RExpr {
 mod test_ropt {
     use super::*;
     use crate::{common::traits::InterpMut, rlang::randp};
+    use pretty_assertions::assert_eq;
 
     fn a_opt(e: RExpr, expected_opt: RExpr, expected_result: i64) {
         println!("{:?}", e);

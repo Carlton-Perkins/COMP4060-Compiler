@@ -1,10 +1,9 @@
-use std::collections::HashSet;
-use std::iter::FromIterator;
-
 use crate::{
     clang::{CArgument, CExpression, CProgram, CStatement, CTail},
     common::types::Variable,
 };
+use std::collections::HashSet;
+use std::iter::FromIterator;
 
 pub type LocalsInfo = HashSet<Variable>;
 pub type CProgramInfo = (CProgram, LocalsInfo);
@@ -78,6 +77,7 @@ impl LocateVars for CExpression {
 mod test_uncover_locals {
     use super::*;
     use crate::clang::*;
+    use pretty_assertions::assert_eq;
     use CArgument::*;
     use CExpression::*;
     use CStatement::*;

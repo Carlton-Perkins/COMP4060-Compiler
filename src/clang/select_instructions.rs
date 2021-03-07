@@ -58,13 +58,13 @@ fn select_expr(dst: &XArgument, src: &CExpression) -> XBlock {
 
 #[cfg(test)]
 mod test_select_instruction {
-
     use super::*;
     use crate::{
         clang::{CArgument::Num, CExpression::*, CTail::*},
         common::traits::InterpMut,
         xlang::{XArgument::*, XInstruction::*, XInterpMut},
     };
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_select_instr() {

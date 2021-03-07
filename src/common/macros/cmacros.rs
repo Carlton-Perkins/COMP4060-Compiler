@@ -38,6 +38,7 @@ macro_rules! CSeq {
 #[cfg(test)]
 mod test_cmacros {
     use crate::clang::{CArgument, CExpression, CProgram, CStatement, CTail};
+    use pretty_assertions::assert_eq;
     use CArgument::*;
     use CExpression::*;
     use CStatement::*;

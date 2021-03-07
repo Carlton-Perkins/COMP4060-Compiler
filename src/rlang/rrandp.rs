@@ -61,9 +61,6 @@ fn randp_(depth: usize, env: &RandEnv) -> RExpr {
 
 #[cfg(test)]
 mod test_rrandp {
-    use itertools::Itertools;
-    use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-
     use super::*;
     use crate::{
         clang::{SelectInstruction, UncoverLocals},
@@ -71,6 +68,9 @@ mod test_rrandp {
         rlang::{ExplicateControl, ResolveComplex, Uniquify},
         xlang::{AssignHomes, CompileAndRun, PatchInstructions, XInterpMut},
     };
+    use itertools::Itertools;
+    use pretty_assertions::assert_eq;
+    use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
     #[test]
     fn test_randp() {

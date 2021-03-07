@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use crate::common::types::Variable;
 use crate::rlang::rprog::{RExpr, RProgram};
+use std::collections::HashMap;
 
 pub trait Uniquify {
     type Env;
@@ -65,6 +64,7 @@ mod test_uniquify {
     use crate::common::traits::InterpMut;
     use crate::rlang::randp;
     use crate::{common::types::Number, rlang::RExpr::*};
+    use pretty_assertions::assert_eq;
 
     type Test = (RProgram, RProgram, Number);
     type Tests = Vec<Test>;

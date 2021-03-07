@@ -76,6 +76,7 @@ impl InterpMut for RExpr {
 #[cfg(test)]
 mod test_rprog {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     fn a_interp(expr: RProgram, expect: Number) {
         let res_opt = expr.interp();

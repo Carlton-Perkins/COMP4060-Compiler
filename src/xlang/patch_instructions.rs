@@ -1,6 +1,5 @@
-use crate::xlang::{XArgument::*, XBlock, XInstruction::*, XProgram, XRegister::*};
-
 use super::XInstruction;
+use crate::xlang::{XArgument::*, XBlock, XInstruction::*, XProgram, XRegister::*};
 pub trait PatchInstructions {
     fn patch(&self) -> Self;
 }
@@ -64,6 +63,7 @@ impl DoPatch for XInstruction {
 mod test_patch_instructions {
     use super::*;
     use crate::xlang::XInterpMut;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_patch() {

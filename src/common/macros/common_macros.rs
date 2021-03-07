@@ -8,6 +8,7 @@ macro_rules! Label {
 #[cfg(test)]
 mod test_cmacros {
     use crate::common::types::Label;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_cmacros() {

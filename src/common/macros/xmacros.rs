@@ -24,7 +24,9 @@ macro_rules! XVar {
 mod test_xmacros {
     use crate::common::types::Label;
     use crate::xlang::{XArgument::*, XBlock, XInstruction::*, XProgram, XRegister::*};
+    use pretty_assertions::assert_eq;
     use std::collections::HashMap;
+
     #[test]
     fn test_xprograms() {
         let test_progs: Vec<(XProgram, XProgram)> = vec![(

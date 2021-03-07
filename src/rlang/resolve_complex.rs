@@ -104,6 +104,7 @@ mod test_rco {
         common::{traits::InterpMut, types::Number},
         rlang::Uniquify,
     };
+    use pretty_assertions::assert_eq;
 
     type Test = (RProgram, RProgram, Number);
     type Tests = Vec<Test>;

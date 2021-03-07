@@ -29,6 +29,7 @@ macro_rules! RVar {
 #[cfg(test)]
 mod test_rmacros {
     use crate::rlang::RExpr::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_rmacros() {

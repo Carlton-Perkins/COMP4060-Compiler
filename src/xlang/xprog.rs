@@ -306,12 +306,12 @@ fn pop(dst: &XArgument, env: &XEnv) -> XEnv {
 
 #[cfg(test)]
 mod test_xprog {
-
     use super::XArgument::*;
     use super::XInstruction::*;
     use super::XRegister::*;
     use super::*;
     use crate::xlang::compile_and_run;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_emit() {

@@ -161,6 +161,7 @@ impl InterpMut for CExpression {
 #[cfg(test)]
 mod test_cprog {
     use super::*;
+    use pretty_assertions::assert_eq;
     use CArgument::*;
     use CExpression::*;
     use CStatement::*;

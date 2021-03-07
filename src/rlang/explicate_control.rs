@@ -54,9 +54,9 @@ fn econ_t(tail: &RExpr) -> CTail {
 
 #[cfg(test)]
 mod test_econ {
-
     use super::*;
     use crate::common::{traits::InterpMut, types::Number};
+    use pretty_assertions::assert_eq;
 
     // Where RProgram is RCO'ed style
     type Test = (RProgram, Number);

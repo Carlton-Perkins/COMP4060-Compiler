@@ -1,12 +1,9 @@
-use std::collections::HashMap;
-
-use itertools::Itertools;
-
+use super::{XArgument, XBlock, XInstruction};
 use crate::clang::LocalsInfo;
 use crate::common::types::{Label, Number};
 use crate::xlang::{XArgument::*, XInstruction::*, XProgram, XRegister::*};
-
-use super::{XArgument, XBlock, XInstruction};
+use itertools::Itertools;
+use std::collections::HashMap;
 
 pub trait AssignHomes {
     fn asn_homes(&self, linfo: &LocalsInfo) -> XProgram;
@@ -102,6 +99,7 @@ fn is_even(v: usize) -> bool {
 mod test_assign_homes {
     use super::*;
     use crate::xlang::XInterpMut;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn test_assign_homes() {
