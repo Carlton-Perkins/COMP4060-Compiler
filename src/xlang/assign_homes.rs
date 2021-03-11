@@ -24,17 +24,17 @@ impl AssignHomes for XProgram {
 
         let new_main = XBlock!(
             "main",
-            Pushq(Reg(RBP)),
-            Movq(Reg(RSP), Reg(RBP)),
-            Subq(Con(stack_space as Number), Reg(RSP)),
+            Pushq(XReg(RBP)),
+            Movq(XReg(RSP), XReg(RBP)),
+            Subq(XCon(stack_space as Number), XReg(RSP)),
             Jmp(Label!("body"))
         );
         let new_end = XBlock!(
             "end",
-            Movq(Reg(RAX), Reg(RDI)),
+            Movq(XReg(RAX), XReg(RDI)),
             Callq(Label!("_print_int")),
-            Addq(Con(stack_space as Number), Reg(RSP)),
-            Popq(Reg(RBP)),
+            Addq(XCon(stack_space as Number), XReg(RSP)),
+            Popq(XReg(RBP)),
             Retq
         );
         let body = self.get(&Label!("main")).unwrap();
@@ -72,10 +72,10 @@ impl Asn for XInstruction {
 impl Asn for XArgument {
     fn asn(&self, renames: &HashMap<Label, XArgument>) -> Self {
         match self {
-            Con(c) => Con(*c),
-            Reg(r) => Reg(r.clone()),
-            Deref(r, offset) => Deref(r.clone(), offset.clone()),
-            Var(v) => renames.get(v).unwrap().clone(),
+            XCon(c) => XCon(*c),
+            XReg(r) => XReg(r.clone()),
+            XDeref(r, offset) => XDeref(r.clone(), offset.clone()),
+            XVar(v) => renames.get(v).unwrap().clone(),
         }
     }
 }
@@ -95,33 +95,33 @@ mod test_assign_homes {
                         "main",
                         Callq(Label!("_read_int")),
                         Callq(Label!("_read_int")),
-                        Movq(Reg(RAX), XVar!("0")),
-                        Movq(XVar!("0"), Reg(RAX)),
+                        Movq(XReg(RAX), XVar!("0")),
+                        Movq(XVar!("0"), XReg(RAX)),
                     )),
                     vec!["0"].into_iter().map(|x| x.into()).collect(),
                 ),
                 XProgram!(
                     XBlock!(
                         "main",
-                        Pushq(Reg(RBP)),
-                        Movq(Reg(RSP), Reg(RBP)),
-                        Subq(Con(16), Reg(RSP)),
+                        Pushq(XReg(RBP)),
+                        Movq(XReg(RSP), XReg(RBP)),
+                        Subq(XCon(16), XReg(RSP)),
                         Jmp(Label!("body"))
                     ),
                     XBlock!(
                         "end",
-                        Movq(Reg(RAX), Reg(RDI)),
+                        Movq(XReg(RAX), XReg(RDI)),
                         Callq(Label!("_print_int")),
-                        Addq(Con(16), Reg(RSP)),
-                        Popq(Reg(RBP)),
+                        Addq(XCon(16), XReg(RSP)),
+                        Popq(XReg(RBP)),
                         Retq
                     ),
                     XBlock!(
                         "body",
                         Callq(Label!("_read_int")),
                         Callq(Label!("_read_int")),
-                        Movq(Reg(RAX), Deref(RBP, 0)),
-                        Movq(Deref(RBP, 0), Reg(RAX)),
+                        Movq(XReg(RAX), XDeref(RBP, 0)),
+                        Movq(XDeref(RBP, 0), XReg(RAX)),
                         Jmp(Label!("end")),
                     )
                 ),
@@ -130,37 +130,37 @@ mod test_assign_homes {
                 (
                     XProgram!(XBlock!(
                         "main",
-                        Movq(Con(3), XVar!("0")),
-                        Movq(Con(2), XVar!("1")),
+                        Movq(XCon(3), XVar!("0")),
+                        Movq(XCon(2), XVar!("1")),
                         Movq(XVar!("1"), XVar!("2")),
                         Addq(XVar!("0"), XVar!("2")),
-                        Movq(XVar!("2"), Reg(RAX)),
+                        Movq(XVar!("2"), XReg(RAX)),
                     )),
                     vec!["0", "1", "2"].into_iter().map(|x| x.into()).collect(),
                 ),
                 XProgram!(
                     XBlock!(
                         "main",
-                        Pushq(Reg(RBP)),
-                        Movq(Reg(RSP), Reg(RBP)),
-                        Subq(Con(32), Reg(RSP)),
+                        Pushq(XReg(RBP)),
+                        Movq(XReg(RSP), XReg(RBP)),
+                        Subq(XCon(32), XReg(RSP)),
                         Jmp(Label!("body"))
                     ),
                     XBlock!(
                         "end",
-                        Movq(Reg(RAX), Reg(RDI)),
+                        Movq(XReg(RAX), XReg(RDI)),
                         Callq(Label!("_print_int")),
-                        Addq(Con(32), Reg(RSP)),
-                        Popq(Reg(RBP)),
+                        Addq(XCon(32), XReg(RSP)),
+                        Popq(XReg(RBP)),
                         Retq
                     ),
                     XBlock!(
                         "body",
-                        Movq(Con(3), Deref(RBP, 0)),
-                        Movq(Con(2), Deref(RBP, -8)),
-                        Movq(Deref(RBP, -8), Deref(RBP, -16)),
-                        Addq(Deref(RBP, 0), Deref(RBP, -16)),
-                        Movq(Deref(RBP, -16), Reg(RAX)),
+                        Movq(XCon(3), XDeref(RBP, 0)),
+                        Movq(XCon(2), XDeref(RBP, -8)),
+                        Movq(XDeref(RBP, -8), XDeref(RBP, -16)),
+                        Addq(XDeref(RBP, 0), XDeref(RBP, -16)),
+                        Movq(XDeref(RBP, -16), XReg(RAX)),
                         Jmp(Label!("end")),
                     )
                 ),

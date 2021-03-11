@@ -20,21 +20,21 @@ fn select_blk((label, blk): (&Label, &CTail)) -> (Label, XBlock) {
 
 fn select_tail(tail: &CTail) -> XBlock {
     match tail {
-        CTail::Return(arg) => vec![XInstruction::Movq(select_arg(arg), XArgument::Reg(RAX))],
+        CTail::Return(arg) => vec![XInstruction::Movq(select_arg(arg), XArgument::XReg(RAX))],
         CTail::Seq(stat, more) => [select_stmt(stat), select_tail(more)].concat(),
     }
 }
 
 fn select_arg(arg: &CArgument) -> XArgument {
     match arg {
-        CArgument::Num(n) => XArgument::Con(*n),
-        CArgument::Var(v) => XArgument::Var(v.into()),
+        CArgument::Num(n) => XArgument::XCon(*n),
+        CArgument::Var(v) => XArgument::XVar(v.into()),
     }
 }
 
 fn select_stmt(stat: &CStatement) -> XBlock {
     match stat {
-        CStatement::Set(v, e) => select_expr(&XArgument::Var(v.into()), e),
+        CStatement::Set(v, e) => select_expr(&XArgument::XVar(v.into()), e),
     }
 }
 
@@ -43,7 +43,7 @@ fn select_expr(dst: &XArgument, src: &CExpression) -> XBlock {
         CExpression::Arg(src_a) => vec![XInstruction::Movq(select_arg(src_a), dst.clone())],
         CExpression::Read => vec![
             XInstruction::Callq(Label!("_read_int")),
-            XInstruction::Movq(XArgument::Reg(RAX), dst.clone()),
+            XInstruction::Movq(XArgument::XReg(RAX), dst.clone()),
         ],
         CExpression::Negate(src_a) => vec![
             XInstruction::Movq(select_arg(src_a), dst.clone()),
@@ -76,8 +76,8 @@ mod test_select_instruction {
                 )),
                 XProgram!(XBlock!(
                     "main",
-                    Movq(Con(5), XVar!("0")),
-                    Movq(XVar!("0"), Reg(RAX)),
+                    Movq(XCon(5), XVar!("0")),
+                    Movq(XVar!("0"), XReg(RAX)),
                 )),
             ),
             (
@@ -96,11 +96,11 @@ mod test_select_instruction {
                 )),
                 XProgram!(XBlock!(
                     "main",
-                    Movq(Con(3), XVar!("0")),
-                    Movq(Con(2), XVar!("1")),
+                    Movq(XCon(3), XVar!("0")),
+                    Movq(XCon(2), XVar!("1")),
                     Movq(XVar!("1"), XVar!("2")),
                     Addq(XVar!("0"), XVar!("2")),
-                    Movq(XVar!("2"), Reg(RAX)),
+                    Movq(XVar!("2"), XReg(RAX)),
                 )),
             ),
             (
@@ -113,10 +113,10 @@ mod test_select_instruction {
                 )),
                 XProgram!(XBlock!(
                     "main",
-                    Movq(Con(5), XVar!("0")),
+                    Movq(XCon(5), XVar!("0")),
                     Movq(XVar!("0"), XVar!("1")),
                     Negq(XVar!("1")),
-                    Movq(XVar!("1"), Reg(RAX)),
+                    Movq(XVar!("1"), XReg(RAX)),
                 )),
             ),
             (
@@ -124,8 +124,8 @@ mod test_select_instruction {
                 XProgram!(XBlock!(
                     "main",
                     Callq(Label!("_read_int")),
-                    Movq(Reg(RAX), XVar!("0")),
-                    Movq(XVar!("0"), Reg(RAX)),
+                    Movq(XReg(RAX), XVar!("0")),
+                    Movq(XVar!("0"), XReg(RAX)),
                 )),
             ),
         ];

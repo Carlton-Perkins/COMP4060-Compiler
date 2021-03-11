@@ -16,7 +16,7 @@ macro_rules! XBlock {
 
 macro_rules! XVar {
     ($str:expr) => {
-        crate::xlang::XArgument::Var($str.into())
+        crate::xlang::XArgument::XVar($str.into())
     };
 }
 
@@ -31,13 +31,13 @@ mod test_xmacros {
     fn test_xprograms() {
         let test_progs: Vec<(XProgram, XProgram)> = vec![(
             vec![
-                ("foo".to_string(), vec![Movq(Con(33), Reg(RAX)), Retq]),
+                ("foo".to_string(), vec![Movq(XCon(33), XReg(RAX)), Retq]),
                 ("main".to_string(), vec![Jmp("foo".to_string()), Retq]),
             ]
             .into_iter()
             .collect::<HashMap<_, _>>(),
             XProgram!(
-                XBlock!("foo", Movq(Con(33), Reg(RAX)), Retq),
+                XBlock!("foo", Movq(XCon(33), XReg(RAX)), Retq),
                 XBlock!("main", Jmp(Label!("foo")), Retq)
             ),
         )];
@@ -52,19 +52,19 @@ mod test_xmacros {
             (
                 "main".to_string(),
                 vec![
-                    Movq(Con(5), Reg(RAX)),
-                    Movq(Con(6), Reg(R9)),
-                    Pushq(Reg(R9)),
-                    Popq(Reg(RAX)),
+                    Movq(XCon(5), XReg(RAX)),
+                    Movq(XCon(6), XReg(R9)),
+                    Pushq(XReg(R9)),
+                    Popq(XReg(RAX)),
                     Retq,
                 ],
             ),
             XBlock!(
                 "main",
-                Movq(Con(5), Reg(RAX)),
-                Movq(Con(6), Reg(R9)),
-                Pushq(Reg(R9)),
-                Popq(Reg(RAX)),
+                Movq(XCon(5), XReg(RAX)),
+                Movq(XCon(6), XReg(R9)),
+                Pushq(XReg(R9)),
+                Popq(XReg(RAX)),
                 Retq,
             ),
         )];

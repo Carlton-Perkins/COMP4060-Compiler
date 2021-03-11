@@ -6,3 +6,7 @@ pub mod types;
 pub mod macros;
 
 pub mod utils;
+
+#[allow(dead_code)]
+pub mod graph;
+pub use graph::Graph;

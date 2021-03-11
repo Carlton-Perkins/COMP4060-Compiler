@@ -1,5 +1,8 @@
 use crate::{
-    common::types::{Label, Variable},
+    common::{
+        types::{Label, Variable},
+        Graph,
+    },
     xlang::{XArgument, XBlock, XInstruction, XProgram, XRegister},
 };
 use std::collections::{HashMap, HashSet};
@@ -12,6 +15,7 @@ pub enum LiveType {
 type LiveSet = HashSet<LiveType>;
 type XBlockLive = Vec<(XInstruction, LiveSet)>;
 type XProgramLive = HashMap<Label, XBlockLive>;
+type XInterfenceGraph = Graph<LiveType>;
 
 pub trait UncoverLive {
     type LiveOut;
@@ -45,10 +49,10 @@ impl UncoverLive for XBlock {
         for inst in self.into_iter().rev() {
             let (readset, writeset) = observe(inst);
 
-            println!("Inst: {:?}", inst);
-            println!("Readset: {:?}", readset);
-            println!("Writeset: {:?}", writeset);
-            println!("Liveafter: {:?}", liveafter);
+            // println!("Inst: {:?}", inst);
+            // println!("Readset: {:?}", readset);
+            // println!("Writeset: {:?}", writeset);
+            // println!("Liveafter: {:?}", liveafter);
 
             liveafter_set.push((inst.clone(), liveafter.clone()));
             liveafter = liveafter
@@ -58,10 +62,10 @@ impl UncoverLive for XBlock {
                 .union(&readset)
                 .map(|x| x.clone())
                 .collect();
-            println!("Livebefore: {:?}\n", liveafter);
+            // println!("Livebefore: {:?}\n", liveafter);
         }
 
-        println!("---");
+        // println!("---");
 
         assert_eq!(liveafter, set![]);
         liveafter_set.reverse();
@@ -74,7 +78,7 @@ fn observe(inst: &XInstruction) -> (LiveSet, LiveSet) {
         XInstruction::Addq(src, dst) => (set![src, dst], set![dst]),
         XInstruction::Subq(src, dst) => (set![src, dst], set![dst]),
         XInstruction::Movq(src, dst) => (set![src], set![dst]),
-        XInstruction::Retq => (set![&XArgument::Reg(XRegister::RAX)], set![]),
+        XInstruction::Retq => (set![&XArgument::XReg(XRegister::RAX)], set![]),
         XInstruction::Negq(target) => (set![target], set![target]),
         XInstruction::Callq(_) => (set![], set![]),
         XInstruction::Jmp(_) => (set![], set![]),
@@ -89,15 +93,19 @@ fn observe(inst: &XInstruction) -> (LiveSet, LiveSet) {
 
 fn arg_to_live(arg: &XArgument) -> Option<LiveType> {
     match arg {
-        XArgument::Con(_) => None,
-        XArgument::Reg(r) => Some(LiveType::Register(r.clone())),
-        XArgument::Deref(r, _) => Some(LiveType::Register(r.clone())),
-        XArgument::Var(v) => Some(LiveType::Var(v.clone())),
+        XArgument::XCon(_) => None,
+        XArgument::XReg(r) => Some(LiveType::Register(r.clone())),
+        XArgument::XDeref(r, _) => Some(LiveType::Register(r.clone())),
+        XArgument::XVar(v) => Some(LiveType::Var(v.clone())),
     }
 }
 
 fn arg_set_to_live_set(ls: &HashSet<&XArgument>) -> LiveSet {
     ls.into_iter().filter_map(|x| arg_to_live(x)).collect()
+}
+
+fn build_interferences(blk: XBlockLive) -> XInterfenceGraph {
+    todo!()
 }
 
 #[cfg(test)]
@@ -117,18 +125,18 @@ mod test_uncover_live {
         let tests: Vec<(XBlock, Vec<LiveSet>)> = vec![
             (
                 vec![
-                    Movq(Con(1), XVar!("v")),
-                    Movq(Con(46), XVar!("w")),
+                    Movq(XCon(1), XVar!("v")),
+                    Movq(XCon(46), XVar!("w")),
                     Movq(XVar!("v"), XVar!("x")),
-                    Addq(Con(7), XVar!("x")),
+                    Addq(XCon(7), XVar!("x")),
                     Movq(XVar!("x"), XVar!("y")),
-                    Addq(Con(4), XVar!("y")),
+                    Addq(XCon(4), XVar!("y")),
                     Movq(XVar!("x"), XVar!("z")),
                     Addq(XVar!("w"), XVar!("z")),
                     Movq(XVar!("y"), XVar!("t")),
                     Negq(XVar!("t")),
-                    Movq(XVar!("z"), Reg(RAX)),
-                    Addq(XVar!("t"), Reg(RAX)),
+                    Movq(XVar!("z"), XReg(RAX)),
+                    Addq(XVar!("t"), XReg(RAX)),
                     Retq,
                 ],
                 vec![
@@ -147,15 +155,15 @@ mod test_uncover_live {
                 ],
             ),
             (
-                vec![Movq(Con(5), Reg(RAX)), Retq],
+                vec![Movq(XCon(5), XReg(RAX)), Retq],
                 vec![set![Register(RAX)], set![Register(RAX)]],
             ),
             (
                 vec![
-                    Movq(Con(5), Reg(RAX)),
-                    Movq(Con(6), Reg(R9)),
-                    Pushq(Reg(R9)),
-                    Popq(Reg(RAX)),
+                    Movq(XCon(5), XReg(RAX)),
+                    Movq(XCon(6), XReg(R9)),
+                    Pushq(XReg(R9)),
+                    Popq(XReg(RAX)),
                     Retq,
                 ],
                 vec![
@@ -168,9 +176,9 @@ mod test_uncover_live {
             ),
             (
                 vec![
-                    Movq(Con(5), Reg(RAX)),
-                    Movq(Con(6), Reg(R9)),
-                    Addq(Reg(R9), Reg(RAX)),
+                    Movq(XCon(5), XReg(RAX)),
+                    Movq(XCon(6), XReg(R9)),
+                    Addq(XReg(R9), XReg(RAX)),
                     Retq,
                 ],
                 vec![
@@ -197,6 +205,51 @@ mod test_uncover_live {
                 expected,
                 live_set_striped.collect::<Vec<LiveSet>>()
             );
+        }
+    }
+
+    #[test]
+    fn test_interfere_graph() {
+        let tests: Vec<(XBlock, XInterfenceGraph)> = vec![(
+            vec![
+                Movq(XCon(1), XVar!("v")),
+                Movq(XCon(46), XVar!("w")),
+                Movq(XVar!("v"), XVar!("x")),
+                Addq(XCon(7), XVar!("x")),
+                Movq(XVar!("x"), XVar!("y")),
+                Addq(XCon(4), XVar!("y")),
+                Movq(XVar!("x"), XVar!("z")),
+                Addq(XVar!("w"), XVar!("z")),
+                Movq(XVar!("y"), XVar!("t")),
+                Negq(XVar!("t")),
+                Movq(XVar!("z"), XReg(RAX)),
+                Addq(XVar!("t"), XReg(RAX)),
+                Retq,
+            ],
+            XInterfenceGraph::from_edges(&[
+                (Var(Var!("v")), Var(Var!("w"))),
+                (Var(Var!("w")), Var(Var!("y"))),
+                (Var(Var!("w")), Var(Var!("x"))),
+                (Var(Var!("w")), Var(Var!("z"))),
+                (Var(Var!("y")), Var(Var!("w"))),
+                (Var(Var!("y")), Var(Var!("x"))),
+                (Var(Var!("y")), Var(Var!("z"))),
+                (Var(Var!("x")), Var(Var!("w"))),
+                (Var(Var!("x")), Var(Var!("y"))),
+                (Var(Var!("z")), Var(Var!("w"))),
+                (Var(Var!("z")), Var(Var!("y"))),
+                (Var(Var!("z")), Var(Var!("t"))),
+                (Var(Var!("t")), Var(Var!("z"))),
+                (Var(Var!("t")), Register(RAX)),
+            ]),
+        )];
+
+        for (start, expected) in tests {
+            println!("Program: {:?}", start);
+            println!("Expected: {:?}", expected);
+            let live_set = start.uncover_live();
+            let interfere = build_interferences(live_set);
+            assert_eq!(interfere.edges, expected.edges);
         }
     }
 }

@@ -6,6 +6,13 @@ macro_rules! Label {
 }
 
 #[macro_export]
+macro_rules! Var {
+    ($e:expr) => {
+        crate::common::types::Variable::from($e)
+    };
+}
+
+#[macro_export]
 macro_rules! set {
     ($($blk:expr),+ $(,)?) => {
         <[_]>::into_vec(Box::new([$($blk),+])).into_iter().collect::<std::collections::HashSet<_>>()

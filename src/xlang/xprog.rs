@@ -50,10 +50,10 @@ pub enum XRegister {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum XArgument {
-    Con(Number),
-    Reg(XRegister),
-    Deref(XRegister, Number),
-    Var(Variable),
+    XCon(Number),
+    XReg(XRegister),
+    XDeref(XRegister, Number),
+    XVar(Variable),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -97,14 +97,14 @@ impl Emit for Label {
 impl Emit for XArgument {
     fn emit(&self) -> String {
         match self {
-            XArgument::Con(n) => format!("${}", n),
-            XArgument::Reg(r) => r.emit(),
-            XArgument::Deref(r, n) => match n {
+            XArgument::XCon(n) => format!("${}", n),
+            XArgument::XReg(r) => r.emit(),
+            XArgument::XDeref(r, n) => match n {
                 0 => format!("({})", r.emit()),
                 n => format!("{}({})", n, r.emit()),
             },
 
-            XArgument::Var(v) => format!("!{}!", v),
+            XArgument::XVar(v) => format!("!{}!", v),
         }
     }
 }
@@ -163,8 +163,8 @@ impl XInterpMut for Label {
             None => match self.as_str() {
                 "_read_int" => {
                     let blk = vec![XInstruction::Movq(
-                        XArgument::Con(env.readc as Number),
-                        XArgument::Reg(XRegister::RAX),
+                        XArgument::XCon(env.readc as Number),
+                        XArgument::XReg(XRegister::RAX),
                     )];
                     env.readc += 1;
                     blk.interp_(env)
@@ -236,7 +236,7 @@ impl XInterpMut for XProgram {
         *ret_env
             .printed
             .get(0)
-            .unwrap_or(&value(&XArgument::Reg(XRegister::RAX), &ret_env))
+            .unwrap_or(&value(&XArgument::XReg(XRegister::RAX), &ret_env))
     }
 
     fn interp(&self) -> Self::Output {
@@ -246,20 +246,20 @@ impl XInterpMut for XProgram {
 
 fn set(dst: &XArgument, val: &Number, env: &XEnv) -> XEnv {
     match dst {
-        XArgument::Con(con) => panic!("Tried to set to a constant {} -> {:?}", con, dst),
-        XArgument::Reg(reg) => {
+        XArgument::XCon(con) => panic!("Tried to set to a constant {} -> {:?}", con, dst),
+        XArgument::XReg(reg) => {
             let mut env_c = env.clone();
             env_c.register.insert(*reg, *val);
             env_c
         }
-        XArgument::Deref(reg, offset) => {
+        XArgument::XDeref(reg, offset) => {
             let mut env_c = env.clone();
             let reg_val = env_c.register.get(reg).unwrap_or(&0); // Default registers to 0
             let target = reg_val + offset;
             env_c.memory.insert(target as usize, *val);
             env_c
         }
-        XArgument::Var(var) => {
+        XArgument::XVar(var) => {
             let mut env_c = env.clone();
             env_c.variable.insert(var.into(), *val);
             env_c
@@ -269,14 +269,14 @@ fn set(dst: &XArgument, val: &Number, env: &XEnv) -> XEnv {
 
 fn value(arg: &XArgument, env: &XEnv) -> Number {
     match arg {
-        XArgument::Con(c) => *c,
-        XArgument::Reg(reg) => *env.register.get(reg).unwrap_or(&0), // Default registers to 0
-        XArgument::Deref(reg, offset) => {
+        XArgument::XCon(c) => *c,
+        XArgument::XReg(reg) => *env.register.get(reg).unwrap_or(&0), // Default registers to 0
+        XArgument::XDeref(reg, offset) => {
             let reg_val = env.register.get(reg).unwrap_or(&0); // Default registers to 0
             let target = reg_val + offset;
             *env.memory.get(&(target as usize)).unwrap_or(&0) // Defaults memory to 0
         }
-        XArgument::Var(var) => {
+        XArgument::XVar(var) => {
             *env.variable.get(var).unwrap_or(&0) as Number // Default variables to 0
         }
     }
@@ -286,20 +286,20 @@ fn push(src: &XArgument, env: &XEnv) -> XEnv {
     let mut env_c = env.clone();
     let val = value(src, &env_c);
     env_c = set(
-        &XArgument::Reg(XRegister::RSP),
-        &(value(&XArgument::Deref(XRegister::RSP, 0), &env_c) - 8),
+        &XArgument::XReg(XRegister::RSP),
+        &(value(&XArgument::XDeref(XRegister::RSP, 0), &env_c) - 8),
         &env_c,
     );
-    set(&XArgument::Deref(XRegister::RSP, 0), &val, &env_c)
+    set(&XArgument::XDeref(XRegister::RSP, 0), &val, &env_c)
 }
 
 fn pop(dst: &XArgument, env: &XEnv) -> XEnv {
     let mut env_c = env.clone();
-    let val = value(&XArgument::Deref(XRegister::RSP, 0), &env_c);
+    let val = value(&XArgument::XDeref(XRegister::RSP, 0), &env_c);
     env_c = set(dst, &val, &env_c);
     set(
-        &XArgument::Reg(XRegister::RSP),
-        &(value(&XArgument::Reg(XRegister::RSP), &env_c) + 8),
+        &XArgument::XReg(XRegister::RSP),
+        &(value(&XArgument::XReg(XRegister::RSP), &env_c) + 8),
         &env_c,
     )
 }
@@ -316,10 +316,10 @@ mod test_xprog {
     #[test]
     fn test_emit() {
         assert_eq!(XRegister::R10.emit(), "%R10");
-        assert_eq!(XArgument::Con(5).emit(), "$5");
-        assert_eq!(XArgument::Reg(XRegister::RAX).emit(), "%RAX");
-        assert_eq!(XArgument::Deref(XRegister::RAX, 5).emit(), "5(%RAX)");
-        assert_eq!(XArgument::Deref(XRegister::RAX, 0).emit(), "(%RAX)");
+        assert_eq!(XArgument::XCon(5).emit(), "$5");
+        assert_eq!(XArgument::XReg(XRegister::RAX).emit(), "%RAX");
+        assert_eq!(XArgument::XDeref(XRegister::RAX, 5).emit(), "5(%RAX)");
+        assert_eq!(XArgument::XDeref(XRegister::RAX, 0).emit(), "(%RAX)");
     }
 
     fn get_test_progs() -> Vec<(XProgram, i64)> {
@@ -327,7 +327,7 @@ mod test_xprog {
             (
                 vec![(
                     "main".to_string(),
-                    vec![Movq(Con(5), Reg(RAX)), Movq(Con(6), Reg(R9)), Retq],
+                    vec![Movq(XCon(5), XReg(RAX)), Movq(XCon(6), XReg(R9)), Retq],
                 )]
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
@@ -337,9 +337,9 @@ mod test_xprog {
                 vec![(
                     "main".to_string(),
                     vec![
-                        Movq(Con(5), Reg(RAX)),
-                        Movq(Con(6), Reg(R9)),
-                        Addq(Reg(R9), Reg(RAX)),
+                        Movq(XCon(5), XReg(RAX)),
+                        Movq(XCon(6), XReg(R9)),
+                        Addq(XReg(R9), XReg(RAX)),
                         Retq,
                     ],
                 )]
@@ -349,7 +349,7 @@ mod test_xprog {
             ),
             (
                 vec![
-                    ("foo".to_string(), vec![Movq(Con(33), Reg(RAX)), Retq]),
+                    ("foo".to_string(), vec![Movq(XCon(33), XReg(RAX)), Retq]),
                     ("main".to_string(), vec![Jmp("foo".to_string()), Retq]),
                 ]
                 .into_iter()
@@ -360,10 +360,10 @@ mod test_xprog {
                 vec![(
                     "main".to_string(),
                     vec![
-                        Movq(Con(5), Reg(RAX)),
-                        Movq(Con(6), Reg(R9)),
-                        Pushq(Reg(R9)),
-                        Popq(Reg(RAX)),
+                        Movq(XCon(5), XReg(RAX)),
+                        Movq(XCon(6), XReg(R9)),
+                        Pushq(XReg(R9)),
+                        Popq(XReg(RAX)),
                         Retq,
                     ],
                 )]

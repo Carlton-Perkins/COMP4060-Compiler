@@ -30,28 +30,28 @@ impl DoPatch for XInstruction {
     fn do_patch(&self) -> Vec<Self> {
         let temp_reg = RAX;
         match self {
-            Addq(Deref(lr, lo), Deref(rr, ro)) => {
-                let src = Deref(lr.clone(), lo.clone());
-                let dst = Deref(rr.clone(), ro.clone());
+            Addq(XDeref(lr, lo), XDeref(rr, ro)) => {
+                let src = XDeref(lr.clone(), lo.clone());
+                let dst = XDeref(rr.clone(), ro.clone());
                 vec![
-                    Movq(src.clone(), Reg(temp_reg)),
-                    Addq(Reg(temp_reg), dst.clone()),
+                    Movq(src.clone(), XReg(temp_reg)),
+                    Addq(XReg(temp_reg), dst.clone()),
                 ]
             }
-            Subq(Deref(lr, lo), Deref(rr, ro)) => {
-                let src = Deref(lr.clone(), lo.clone());
-                let dst = Deref(rr.clone(), ro.clone());
+            Subq(XDeref(lr, lo), XDeref(rr, ro)) => {
+                let src = XDeref(lr.clone(), lo.clone());
+                let dst = XDeref(rr.clone(), ro.clone());
                 vec![
-                    Movq(src.clone(), Reg(temp_reg)),
-                    Subq(Reg(temp_reg), dst.clone()),
+                    Movq(src.clone(), XReg(temp_reg)),
+                    Subq(XReg(temp_reg), dst.clone()),
                 ]
             }
-            Movq(Deref(lr, lo), Deref(rr, ro)) => {
-                let src = Deref(lr.clone(), lo.clone());
-                let dst = Deref(rr.clone(), ro.clone());
+            Movq(XDeref(lr, lo), XDeref(rr, ro)) => {
+                let src = XDeref(lr.clone(), lo.clone());
+                let dst = XDeref(rr.clone(), ro.clone());
                 vec![
-                    Movq(src.clone(), Reg(temp_reg)),
-                    Movq(Reg(temp_reg), dst.clone()),
+                    Movq(src.clone(), XReg(temp_reg)),
+                    Movq(XReg(temp_reg), dst.clone()),
                 ]
             }
             _ => vec![self.clone()],
@@ -72,36 +72,36 @@ mod test_patch_instructions {
                 XProgram!(
                     XBlock!(
                         "main",
-                        Pushq(Reg(RBP)),
-                        Movq(Reg(RSP), Reg(RBP)),
-                        Subq(Con(16), Reg(RSP)),
+                        Pushq(XReg(RBP)),
+                        Movq(XReg(RSP), XReg(RBP)),
+                        Subq(XCon(16), XReg(RSP)),
                         Jmp(Label!("body"))
                     ),
-                    XBlock!("end", Addq(Con(16), Reg(RSP)), Popq(Reg(RBP)), Retq),
+                    XBlock!("end", Addq(XCon(16), XReg(RSP)), Popq(XReg(RBP)), Retq),
                     XBlock!(
                         "body",
                         Callq(Label!("_read_int")),
                         Callq(Label!("_read_int")),
-                        Movq(Reg(RAX), Deref(RBP, 0)),
-                        Movq(Deref(RBP, 0), Reg(RAX)),
+                        Movq(XReg(RAX), XDeref(RBP, 0)),
+                        Movq(XDeref(RBP, 0), XReg(RAX)),
                         Jmp(Label!("end")),
                     )
                 ),
                 XProgram!(
                     XBlock!(
                         "main",
-                        Pushq(Reg(RBP)),
-                        Movq(Reg(RSP), Reg(RBP)),
-                        Subq(Con(16), Reg(RSP)),
+                        Pushq(XReg(RBP)),
+                        Movq(XReg(RSP), XReg(RBP)),
+                        Subq(XCon(16), XReg(RSP)),
                         Jmp(Label!("body"))
                     ),
-                    XBlock!("end", Addq(Con(16), Reg(RSP)), Popq(Reg(RBP)), Retq),
+                    XBlock!("end", Addq(XCon(16), XReg(RSP)), Popq(XReg(RBP)), Retq),
                     XBlock!(
                         "body",
                         Callq(Label!("_read_int")),
                         Callq(Label!("_read_int")),
-                        Movq(Reg(RAX), Deref(RBP, 0)),
-                        Movq(Deref(RBP, 0), Reg(RAX)),
+                        Movq(XReg(RAX), XDeref(RBP, 0)),
+                        Movq(XDeref(RBP, 0), XReg(RAX)),
                         Jmp(Label!("end")),
                     )
                 ),
@@ -110,40 +110,40 @@ mod test_patch_instructions {
                 XProgram!(
                     XBlock!(
                         "main",
-                        Pushq(Reg(RBP)),
-                        Movq(Reg(RSP), Reg(RBP)),
-                        Subq(Con(32), Reg(RSP)),
+                        Pushq(XReg(RBP)),
+                        Movq(XReg(RSP), XReg(RBP)),
+                        Subq(XCon(32), XReg(RSP)),
                         Jmp(Label!("body"))
                     ),
-                    XBlock!("end", Addq(Con(32), Reg(RSP)), Popq(Reg(RBP)), Retq),
+                    XBlock!("end", Addq(XCon(32), XReg(RSP)), Popq(XReg(RBP)), Retq),
                     XBlock!(
                         "body",
-                        Movq(Con(3), Deref(RBP, 0)),
-                        Movq(Con(2), Deref(RBP, 8)),
-                        Movq(Deref(RBP, 8), Deref(RBP, 16)),
-                        Addq(Deref(RBP, 0), Deref(RBP, 16)),
-                        Movq(Deref(RBP, 16), Reg(RAX)),
+                        Movq(XCon(3), XDeref(RBP, 0)),
+                        Movq(XCon(2), XDeref(RBP, 8)),
+                        Movq(XDeref(RBP, 8), XDeref(RBP, 16)),
+                        Addq(XDeref(RBP, 0), XDeref(RBP, 16)),
+                        Movq(XDeref(RBP, 16), XReg(RAX)),
                         Jmp(Label!("end")),
                     )
                 ),
                 XProgram!(
                     XBlock!(
                         "main",
-                        Pushq(Reg(RBP)),
-                        Movq(Reg(RSP), Reg(RBP)),
-                        Subq(Con(32), Reg(RSP)),
+                        Pushq(XReg(RBP)),
+                        Movq(XReg(RSP), XReg(RBP)),
+                        Subq(XCon(32), XReg(RSP)),
                         Jmp(Label!("body"))
                     ),
-                    XBlock!("end", Addq(Con(32), Reg(RSP)), Popq(Reg(RBP)), Retq),
+                    XBlock!("end", Addq(XCon(32), XReg(RSP)), Popq(XReg(RBP)), Retq),
                     XBlock!(
                         "body",
-                        Movq(Con(3), Deref(RBP, 0)),
-                        Movq(Con(2), Deref(RBP, 8)),
-                        Movq(Deref(RBP, 8), Reg(RAX)), // Move to temp first
-                        Movq(Reg(RAX), Deref(RBP, 16)),
-                        Movq(Deref(RBP, 0), Reg(RAX)), // Move to temp first
-                        Addq(Reg(RAX), Deref(RBP, 16)),
-                        Movq(Deref(RBP, 16), Reg(RAX)),
+                        Movq(XCon(3), XDeref(RBP, 0)),
+                        Movq(XCon(2), XDeref(RBP, 8)),
+                        Movq(XDeref(RBP, 8), XReg(RAX)), // Move to temp first
+                        Movq(XReg(RAX), XDeref(RBP, 16)),
+                        Movq(XDeref(RBP, 0), XReg(RAX)), // Move to temp first
+                        Addq(XReg(RAX), XDeref(RBP, 16)),
+                        Movq(XDeref(RBP, 16), XReg(RAX)),
                         Jmp(Label!("end")),
                     )
                 ),

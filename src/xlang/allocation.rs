@@ -33,7 +33,7 @@ impl Allocator for StupidStackAllocator {
             .into_iter()
             .sorted_by_key(|x| x.clone())
             .enumerate()
-            .map(|(idx, label)| (label.clone(), Deref(RBP, (-8 * idx as isize) as i64)))
+            .map(|(idx, label)| (label.clone(), XDeref(RBP, (-8 * idx as isize) as i64)))
             .collect();
 
         Allocation {
