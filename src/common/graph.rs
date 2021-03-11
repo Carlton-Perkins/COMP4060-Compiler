@@ -24,14 +24,16 @@ where
     }
 
     pub fn update_edge(&mut self, a: &NodeT, b: &NodeT) {
-        if !self.edges.contains_key(&a) {
-            self.new_edge(a.clone())
-        };
-        if !self.edges.contains_key(&b) {
-            self.new_edge(b.clone())
-        };
-        self.edges.get_mut(&a).unwrap().insert(b.clone());
-        self.edges.get_mut(&b).unwrap().insert(a.clone());
+        if a != b {
+            if !self.edges.contains_key(&a) {
+                self.new_edge(a.clone())
+            };
+            if !self.edges.contains_key(&b) {
+                self.new_edge(b.clone())
+            };
+            self.edges.get_mut(&a).unwrap().insert(b.clone());
+            self.edges.get_mut(&b).unwrap().insert(a.clone());
+        }
     }
 
     pub fn get_connections(&self, key: &NodeT) -> HashSet<&NodeT> {

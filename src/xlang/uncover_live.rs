@@ -7,6 +7,8 @@ use crate::{
 };
 use std::collections::{HashMap, HashSet};
 
+use super::xprog::CALLER_SAVED_REGISTERS;
+
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum LiveType {
     Register(XRegister),
@@ -16,6 +18,17 @@ type LiveSet = HashSet<LiveType>;
 type XBlockLive = Vec<(XInstruction, LiveSet)>;
 type XProgramLive = HashMap<Label, XBlockLive>;
 type XInterfenceGraph = Graph<LiveType>;
+
+impl PartialEq<XArgument> for LiveType {
+    fn eq(&self, other: &XArgument) -> bool {
+        match (self, other) {
+            (LiveType::Register(lr), XArgument::XReg(rr)) => lr == rr,
+            (LiveType::Register(lr), XArgument::XDeref(rr, _)) => lr == rr,
+            (LiveType::Var(lv), XArgument::XVar(rv)) => lv == rv,
+            _ => false,
+        }
+    }
+}
 
 pub trait UncoverLive {
     type LiveOut;
@@ -105,14 +118,51 @@ fn arg_set_to_live_set(ls: &HashSet<&XArgument>) -> LiveSet {
 }
 
 fn build_interferences(blk: XBlockLive) -> XInterfenceGraph {
-    todo!()
+    let mut igraph = XInterfenceGraph::new();
+    blk.into_iter()
+        .for_each(|(inst, liveafter)| build_graph(&inst, &liveafter, &mut igraph));
+    igraph
+}
+
+fn build_graph(inst: &XInstruction, liveafter: &LiveSet, g: &mut XInterfenceGraph) {
+    match inst {
+        XInstruction::Addq(_, dst) => add_graph(g, liveafter, dst),
+        XInstruction::Subq(_, dst) => add_graph(g, liveafter, dst),
+        XInstruction::Movq(src, dst) => {
+            let d = arg_to_live(dst).unwrap();
+            for v in liveafter {
+                if v != dst && v != src {
+                    g.update_edge(&d, v);
+                }
+            }
+        }
+        XInstruction::Retq => {}
+        XInstruction::Negq(dst) => add_graph(g, liveafter, dst),
+        XInstruction::Callq(_) => {
+            for r in CALLER_SAVED_REGISTERS {
+                for v in liveafter {
+                    g.update_edge(v, &LiveType::Register(*r));
+                }
+            }
+        }
+        XInstruction::Jmp(_) => {}
+        XInstruction::Pushq(_) => {}
+        XInstruction::Popq(dst) => add_graph(g, liveafter, dst),
+    }
+}
+
+fn add_graph(graph: &mut XInterfenceGraph, liveafter: &LiveSet, arg: &XArgument) {
+    let d = arg_to_live(arg).unwrap();
+    for v in liveafter {
+        graph.update_edge(&d, v);
+    }
 }
 
 #[cfg(test)]
 mod test_uncover_live {
     use super::{LiveType::*, *};
     use crate::xlang::{XArgument::*, XInstruction::*, XRegister::*};
-    // use pretty_assertions::assert_eq;
+    use pretty_assertions::assert_eq;
 
     macro_rules! LTVar {
         ($expr:expr) => {
@@ -210,39 +260,51 @@ mod test_uncover_live {
 
     #[test]
     fn test_interfere_graph() {
-        let tests: Vec<(XBlock, XInterfenceGraph)> = vec![(
-            vec![
-                Movq(XCon(1), XVar!("v")),
-                Movq(XCon(46), XVar!("w")),
-                Movq(XVar!("v"), XVar!("x")),
-                Addq(XCon(7), XVar!("x")),
-                Movq(XVar!("x"), XVar!("y")),
-                Addq(XCon(4), XVar!("y")),
-                Movq(XVar!("x"), XVar!("z")),
-                Addq(XVar!("w"), XVar!("z")),
-                Movq(XVar!("y"), XVar!("t")),
-                Negq(XVar!("t")),
-                Movq(XVar!("z"), XReg(RAX)),
-                Addq(XVar!("t"), XReg(RAX)),
-                Retq,
-            ],
-            XInterfenceGraph::from_edges(&[
-                (Var(Var!("v")), Var(Var!("w"))),
-                (Var(Var!("w")), Var(Var!("y"))),
-                (Var(Var!("w")), Var(Var!("x"))),
-                (Var(Var!("w")), Var(Var!("z"))),
-                (Var(Var!("y")), Var(Var!("w"))),
-                (Var(Var!("y")), Var(Var!("x"))),
-                (Var(Var!("y")), Var(Var!("z"))),
-                (Var(Var!("x")), Var(Var!("w"))),
-                (Var(Var!("x")), Var(Var!("y"))),
-                (Var(Var!("z")), Var(Var!("w"))),
-                (Var(Var!("z")), Var(Var!("y"))),
-                (Var(Var!("z")), Var(Var!("t"))),
-                (Var(Var!("t")), Var(Var!("z"))),
-                (Var(Var!("t")), Register(RAX)),
-            ]),
-        )];
+        let tests: Vec<(XBlock, XInterfenceGraph)> = vec![
+            (
+                vec![
+                    Movq(XCon(1), XVar!("v")),
+                    Movq(XCon(46), XVar!("w")),
+                    Movq(XVar!("v"), XVar!("x")),
+                    Addq(XCon(7), XVar!("x")),
+                    Movq(XVar!("x"), XVar!("y")),
+                    Addq(XCon(4), XVar!("y")),
+                    Movq(XVar!("x"), XVar!("z")),
+                    Addq(XVar!("w"), XVar!("z")),
+                    Movq(XVar!("y"), XVar!("t")),
+                    Negq(XVar!("t")),
+                    Movq(XVar!("z"), XReg(RAX)),
+                    Addq(XVar!("t"), XReg(RAX)),
+                    Retq,
+                ],
+                XInterfenceGraph::from_edges(&[
+                    (Var(Var!("v")), Var(Var!("w"))),
+                    (Var(Var!("w")), Var(Var!("y"))),
+                    (Var(Var!("w")), Var(Var!("x"))),
+                    (Var(Var!("w")), Var(Var!("z"))),
+                    (Var(Var!("y")), Var(Var!("w"))),
+                    (Var(Var!("y")), Var(Var!("x"))),
+                    (Var(Var!("y")), Var(Var!("z"))),
+                    (Var(Var!("x")), Var(Var!("w"))),
+                    (Var(Var!("x")), Var(Var!("y"))),
+                    (Var(Var!("z")), Var(Var!("w"))),
+                    (Var(Var!("z")), Var(Var!("y"))),
+                    (Var(Var!("z")), Var(Var!("t"))),
+                    (Var(Var!("t")), Var(Var!("z"))),
+                    (Var(Var!("t")), Register(RAX)),
+                ]),
+            ),
+            (
+                vec![
+                    Movq(XCon(5), XReg(RAX)),
+                    Movq(XCon(6), XReg(R9)),
+                    Pushq(XReg(R9)),
+                    Popq(XReg(RAX)),
+                    Retq,
+                ],
+                XInterfenceGraph::from_edges(&[]),
+            ),
+        ];
 
         for (start, expected) in tests {
             println!("Program: {:?}", start);

@@ -48,6 +48,27 @@ pub enum XRegister {
     R15,
 }
 
+pub const CALLER_SAVED_REGISTERS: &[XRegister] = &[
+    XRegister::RAX,
+    XRegister::RDX,
+    XRegister::RCX,
+    XRegister::RSI,
+    XRegister::RDI,
+    XRegister::R8,
+    XRegister::R9,
+    XRegister::R10,
+    XRegister::R11,
+];
+
+pub const CALLEE_SAVED_REGISTERS: &[XRegister] = &[
+    XRegister::RBX,
+    XRegister::RBP,
+    XRegister::R12,
+    XRegister::R13,
+    XRegister::R14,
+    XRegister::R15,
+];
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum XArgument {
     XCon(Number),
