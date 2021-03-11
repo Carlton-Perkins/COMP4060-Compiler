@@ -48,7 +48,7 @@ pub enum XRegister {
     R15,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum XArgument {
     Con(Number),
     Reg(XRegister),
