@@ -18,9 +18,9 @@ trait Asn {
 
 impl AssignHomes for XProgram {
     fn asn_homes(&self, linfo: &LocalsInfo) -> XProgram {
-        let allocator = StupidStackAllocator::allocate(self, linfo);
-        let renames = allocator.variable_mapping;
-        let stack_space = allocator.stack_space;
+        let allocation = StupidStackAllocator::allocate(self, linfo);
+        let renames = allocation.variable_mapping;
+        let stack_space = allocation.stack_space;
 
         let new_main = XBlock!(
             "main",

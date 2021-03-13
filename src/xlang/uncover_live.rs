@@ -3,11 +3,9 @@ use crate::{
         types::{Label, Variable},
         Graph,
     },
-    xlang::{XArgument, XBlock, XInstruction, XProgram, XRegister},
+    xlang::{XArgument, XBlock, XInstruction, XProgram, XRegister, CALLER_SAVED_REGISTERS},
 };
 use std::collections::{HashMap, HashSet};
-
-use super::xprog::CALLER_SAVED_REGISTERS;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum LiveType {
@@ -18,6 +16,9 @@ type LiveSet = HashSet<LiveType>;
 type XBlockLive = Vec<(XInstruction, LiveSet)>;
 type XProgramLive = HashMap<Label, XBlockLive>;
 type XInterfenceGraph = Graph<LiveType>;
+type XMoveGraph = Graph<LiveType>;
+type Color = usize;
+type ColorAssignment = HashMap<LiveType, Color>;
 
 impl PartialEq<XArgument> for LiveType {
     fn eq(&self, other: &XArgument) -> bool {
@@ -117,19 +118,29 @@ fn arg_set_to_live_set(ls: &HashSet<&XArgument>) -> LiveSet {
     ls.into_iter().filter_map(|x| arg_to_live(x)).collect()
 }
 
-fn build_interferences(blk: XBlockLive) -> XInterfenceGraph {
+fn build_interferences(blk: XBlockLive) -> (XInterfenceGraph, XMoveGraph) {
     let mut igraph = XInterfenceGraph::new();
+    let mut mgraph = XMoveGraph::new();
     blk.into_iter()
-        .for_each(|(inst, liveafter)| build_graph(&inst, &liveafter, &mut igraph));
-    igraph
+        .for_each(|(inst, liveafter)| build_graph(&inst, &liveafter, &mut igraph, &mut mgraph));
+    (igraph, mgraph)
 }
 
-fn build_graph(inst: &XInstruction, liveafter: &LiveSet, g: &mut XInterfenceGraph) {
+fn build_graph(
+    inst: &XInstruction,
+    liveafter: &LiveSet,
+    g: &mut XInterfenceGraph,
+    m: &mut XMoveGraph,
+) {
     match inst {
         XInstruction::Addq(_, dst) => add_graph(g, liveafter, dst),
         XInstruction::Subq(_, dst) => add_graph(g, liveafter, dst),
         XInstruction::Movq(src, dst) => {
+            let s = arg_to_live(src);
             let d = arg_to_live(dst).unwrap();
+            if s.is_some() {
+                m.update_edge(&s.unwrap(), &d)
+            };
             for v in liveafter {
                 if v != dst && v != src {
                     g.update_edge(&d, v);
@@ -158,10 +169,18 @@ fn add_graph(graph: &mut XInterfenceGraph, liveafter: &LiveSet, arg: &XArgument)
     }
 }
 
+fn color_graph(
+    i_graph: &XInterfenceGraph,
+    init_asn: &ColorAssignment,
+    m_graph: &XMoveGraph,
+) -> ColorAssignment {
+    todo!()
+}
+
 #[cfg(test)]
 mod test_uncover_live {
     use super::{LiveType::*, *};
-    use crate::xlang::{XArgument::*, XInstruction::*, XRegister::*};
+    use crate::xlang::{XArgument::*, XInstruction::*, XRegister::*, ALL_REGISTERS};
     use pretty_assertions::assert_eq;
 
     macro_rules! LTVar {
@@ -260,7 +279,7 @@ mod test_uncover_live {
 
     #[test]
     fn test_interfere_graph() {
-        let tests: Vec<(XBlock, XInterfenceGraph)> = vec![
+        let tests: Vec<(XBlock, XInterfenceGraph, XMoveGraph)> = vec![
             (
                 vec![
                     Movq(XCon(1), XVar!("v")),
@@ -293,6 +312,13 @@ mod test_uncover_live {
                     (Var(Var!("t")), Var(Var!("z"))),
                     (Var(Var!("t")), Register(RAX)),
                 ]),
+                XMoveGraph::from_edges(&[
+                    (Var(Var!("v")), Var(Var!("x"))),
+                    (Var(Var!("x")), Var(Var!("z"))),
+                    (Var(Var!("x")), Var(Var!("y"))),
+                    (Var(Var!("y")), Var(Var!("t"))),
+                    (Var(Var!("z")), Register(RAX)),
+                ]),
             ),
             (
                 vec![
@@ -303,15 +329,72 @@ mod test_uncover_live {
                     Retq,
                 ],
                 XInterfenceGraph::from_edges(&[]),
+                XMoveGraph::from_edges(&[]),
             ),
         ];
 
-        for (start, expected) in tests {
+        for (start, expectedigraph, expectedmgraph) in tests {
             println!("Program: {:?}", start);
-            println!("Expected: {:?}", expected);
+            println!("ExpectedIGraph: {:?}", expectedigraph);
+            println!("ExpectedMGraph: {:?}", expectedmgraph);
             let live_set = start.uncover_live();
-            let interfere = build_interferences(live_set);
-            assert_eq!(interfere.edges, expected.edges);
+            let (interfere, moves) = build_interferences(live_set);
+            assert_eq!(interfere.edges, expectedigraph.edges);
+            assert_eq!(moves.edges, expectedmgraph.edges);
+        }
+    }
+
+    #[test]
+    fn test_color_graph() {
+        let tests: Vec<(XInterfenceGraph, XMoveGraph, ColorAssignment)> = vec![(
+            XInterfenceGraph::from_edges(&[
+                (Var(Var!("v")), Var(Var!("w"))),
+                (Var(Var!("w")), Var(Var!("y"))),
+                (Var(Var!("w")), Var(Var!("x"))),
+                (Var(Var!("w")), Var(Var!("z"))),
+                (Var(Var!("y")), Var(Var!("w"))),
+                (Var(Var!("y")), Var(Var!("x"))),
+                (Var(Var!("y")), Var(Var!("z"))),
+                (Var(Var!("x")), Var(Var!("w"))),
+                (Var(Var!("x")), Var(Var!("y"))),
+                (Var(Var!("z")), Var(Var!("w"))),
+                (Var(Var!("z")), Var(Var!("y"))),
+                (Var(Var!("z")), Var(Var!("t"))),
+                (Var(Var!("t")), Var(Var!("z"))),
+                (Var(Var!("t")), Register(RAX)),
+            ]),
+            XMoveGraph::from_edges(&[
+                (Var(Var!("v")), Var(Var!("x"))),
+                (Var(Var!("x")), Var(Var!("z"))),
+                (Var(Var!("x")), Var(Var!("y"))),
+                (Var(Var!("y")), Var(Var!("t"))),
+                (Var(Var!("z")), Register(RAX)),
+            ]),
+            vec![
+                (Var(Var!("v")), 0),
+                (Var(Var!("x")), 0),
+                (Var(Var!("z")), 0),
+                (Var(Var!("y")), 1),
+                (Var(Var!("w")), 2),
+                (Register(RAX), 0),
+                (Register(RBX), 1),
+                (Register(RCX), 2),
+                (Register(RDX), 3),
+            ]
+            .iter()
+            .cloned()
+            .collect::<ColorAssignment>(),
+        )];
+
+        for (ig, mg, expected_ca) in tests {
+            let init_asn = ALL_REGISTERS
+                .into_iter()
+                .enumerate()
+                .map(|(e, r)| (LiveType::Register(*r), e))
+                .collect::<ColorAssignment>();
+            let ca = color_graph(&ig, &init_asn, &mg);
+
+            assert_eq!(ca, expected_ca);
         }
     }
 }

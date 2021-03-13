@@ -1,6 +1,9 @@
 #[allow(dead_code)]
 pub mod xprog;
-pub use xprog::{XArgument, XBlock, XEnv, XInstruction, XInterpMut, XProgram, XRegister};
+pub use xprog::{
+    XArgument, XBlock, XEnv, XInstruction, XInterpMut, XProgram, XRegister, ALL_REGISTERS,
+    CALLEE_SAVED_REGISTERS, CALLER_SAVED_REGISTERS, TEMP_REGISTER,
+};
 
 #[allow(dead_code)]
 mod assign_homes;

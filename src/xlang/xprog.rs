@@ -30,14 +30,14 @@ pub struct XEnv {
 
 #[derive(Debug, strum_macros::ToString, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum XRegister {
-    RSP,
-    RBP,
     RAX,
     RBX,
     RCX,
     RDX,
     RSI,
     RDI,
+    RBP,
+    RSP,
     R8,
     R9,
     R10,
@@ -47,27 +47,20 @@ pub enum XRegister {
     R14,
     R15,
 }
+mod reglist {
+    use super::{XRegister, XRegister::*};
 
-pub const CALLER_SAVED_REGISTERS: &[XRegister] = &[
-    XRegister::RAX,
-    XRegister::RDX,
-    XRegister::RCX,
-    XRegister::RSI,
-    XRegister::RDI,
-    XRegister::R8,
-    XRegister::R9,
-    XRegister::R10,
-    XRegister::R11,
-];
+    pub const ALL_REGISTERS: &[XRegister] = &[
+        RAX, RBX, RCX, RDX, RSI, RDI, RBP, RSP, R8, R9, R10, R11, R12, R13, R14, R15,
+    ];
 
-pub const CALLEE_SAVED_REGISTERS: &[XRegister] = &[
-    XRegister::RBX,
-    XRegister::RBP,
-    XRegister::R12,
-    XRegister::R13,
-    XRegister::R14,
-    XRegister::R15,
-];
+    pub const CALLER_SAVED_REGISTERS: &[XRegister] = &[RAX, RDX, RCX, RSI, RDI, R8, R9, R10, R11];
+
+    pub const CALLEE_SAVED_REGISTERS: &[XRegister] = &[RBX, RBP, R12, R13, R14, R15];
+
+    pub const TEMP_REGISTER: XRegister = RAX;
+}
+pub use reglist::{ALL_REGISTERS, CALLEE_SAVED_REGISTERS, CALLER_SAVED_REGISTERS, TEMP_REGISTER};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum XArgument {
