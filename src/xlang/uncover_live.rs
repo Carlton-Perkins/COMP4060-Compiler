@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use crate::{
     common::{
         types::{Label, Variable},
@@ -19,17 +21,6 @@ type XInterfenceGraph = Graph<LiveType>;
 type XMoveGraph = Graph<LiveType>;
 type Color = usize;
 type ColorAssignment = HashMap<LiveType, Color>;
-
-impl PartialEq<XArgument> for LiveType {
-    fn eq(&self, other: &XArgument) -> bool {
-        match (self, other) {
-            (LiveType::Register(lr), XArgument::XReg(rr)) => lr == rr,
-            (LiveType::Register(lr), XArgument::XDeref(rr, _)) => lr == rr,
-            (LiveType::Var(lv), XArgument::XVar(rv)) => lv == rv,
-            _ => false,
-        }
-    }
-}
 
 pub trait UncoverLive {
     type LiveOut;
@@ -84,6 +75,34 @@ impl UncoverLive for XBlock {
         assert_eq!(liveafter, set![]);
         liveafter_set.reverse();
         liveafter_set
+    }
+}
+
+impl PartialEq<XArgument> for LiveType {
+    fn eq(&self, other: &XArgument) -> bool {
+        match (self, other) {
+            (LiveType::Register(lr), XArgument::XReg(rr)) => lr == rr,
+            (LiveType::Register(lr), XArgument::XDeref(rr, _)) => lr == rr,
+            (LiveType::Var(lv), XArgument::XVar(rv)) => lv == rv,
+            _ => false,
+        }
+    }
+}
+
+impl PartialOrd for LiveType {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for LiveType {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (LiveType::Register(l), LiveType::Register(r)) => l.cmp(r),
+            (LiveType::Register(_), LiveType::Var(_)) => std::cmp::Ordering::Less,
+            (LiveType::Var(_), LiveType::Register(_)) => std::cmp::Ordering::Greater,
+            (LiveType::Var(l), LiveType::Var(r)) => l.cmp(r),
+        }
     }
 }
 
@@ -174,14 +193,89 @@ fn color_graph(
     init_asn: &ColorAssignment,
     m_graph: &XMoveGraph,
 ) -> ColorAssignment {
-    todo!()
+    // Collect initical assignment
+    let mut asn = init_asn.clone();
+
+    // Compute remaining variables that need assignement
+    let mut vars_left: Vec<_> = i_graph
+        .edges
+        .keys()
+        .filter(|x| !init_asn.contains_key(*x))
+        .collect::<Vec<_>>()
+        .into_iter()
+        .sorted()
+        .collect();
+
+    // While there are variables left that need assigning
+    while !vars_left.is_empty() {
+        println!("VarsLeft: {:?}", vars_left);
+        // Ensure the list is always sorted by newest saturation information
+        vars_left.sort_by_key(|x| sat(x, &asn, i_graph));
+
+        // Take the largest saturation variable
+        let var = vars_left.pop().unwrap();
+        println!("Took var {:?} with sat {}", var, sat(var, &asn, i_graph));
+
+        // Compute the moves related to the current variable
+        let moves = m_graph
+            .edges
+            .get(var)
+            .unwrap_or(&set![])
+            .into_iter()
+            .filter(|x| asn.contains_key(x))
+            .map(|x| asn.get(x).unwrap())
+            .cloned()
+            .collect();
+
+        // Compute the color conflicts with the current variable
+        let conflicts = color_conflicts(var, &asn, i_graph);
+
+        // Find a valid color
+        // Search the moves, then the conflicts
+        for i in [moves, (0..=conflicts.len()).collect::<Vec<_>>()].concat() {
+            // If i does not conflict
+            if !conflicts.contains(&i) {
+                // Then assign it color i
+                println!("Assigned {:?} color {}", var, i);
+                asn.insert(var.clone(), i);
+                break;
+            }
+        }
+    }
+    asn
+}
+
+fn sat(v: &LiveType, current_asn: &ColorAssignment, i_graph: &XInterfenceGraph) -> usize {
+    i_graph
+        .edges
+        .get(v)
+        .unwrap()
+        .into_iter()
+        .filter(|x| current_asn.contains_key(x))
+        .count()
+}
+
+fn color_conflicts(
+    v: &LiveType,
+    current_asn: &ColorAssignment,
+    i_graph: &XInterfenceGraph,
+) -> HashSet<Color> {
+    i_graph
+        .edges
+        .get(v)
+        .unwrap()
+        .into_iter()
+        .filter(|x| current_asn.contains_key(x))
+        .map(|x| current_asn.get(x).unwrap())
+        .cloned()
+        .collect()
 }
 
 #[cfg(test)]
 mod test_uncover_live {
     use super::{LiveType::*, *};
     use crate::xlang::{XArgument::*, XInstruction::*, XRegister::*, ALL_REGISTERS};
-    use pretty_assertions::assert_eq;
+    // use pretty_assertions::assert_eq;
 
     macro_rules! LTVar {
         ($expr:expr) => {
@@ -376,10 +470,23 @@ mod test_uncover_live {
                 (Var(Var!("z")), 0),
                 (Var(Var!("y")), 1),
                 (Var(Var!("w")), 2),
+                (Var(Var!("t")), 1),
                 (Register(RAX), 0),
                 (Register(RBX), 1),
                 (Register(RCX), 2),
                 (Register(RDX), 3),
+                (Register(RSI), 4),
+                (Register(RDI), 5),
+                (Register(RBP), 6),
+                (Register(RSP), 7),
+                (Register(R8), 8),
+                (Register(R9), 9),
+                (Register(R10), 10),
+                (Register(R11), 11),
+                (Register(R12), 12),
+                (Register(R13), 13),
+                (Register(R14), 14),
+                (Register(R15), 15),
             ]
             .iter()
             .cloned()
@@ -394,7 +501,28 @@ mod test_uncover_live {
                 .collect::<ColorAssignment>();
             let ca = color_graph(&ig, &init_asn, &mg);
 
-            assert_eq!(ca, expected_ca);
+            println!("{:?}", ca);
+            println!("{:?}", expected_ca);
+
+            for (t, ec) in expected_ca.clone() {
+                let c = ca.get(&t);
+                match c {
+                    Some(v) => {
+                        if *v == ec {
+                            println!("{:?}\t gave {:?} \t\t == {}", t, *v, ec);
+                        } else {
+                            println!("{:?}\t gave {:?} \t\t != {}", t, *v, ec);
+                        }
+                    }
+                    None => {
+                        println!("{:?}\t gave {:?}\t\t != {}", t, c, ec);
+                    }
+                }
+            }
+
+            assert_eq!(expected_ca, ca);
+            // assert_eq!(ca.into_iter().collect::<Vec<_>>().sort(), expected_ca.into_iter().collect::<Vec<_>>().sort());
+            // assert!(false);
         }
     }
 }

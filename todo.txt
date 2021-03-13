@@ -53,7 +53,7 @@ x 2021-03-11 Implement the uncover-live pass for X0 programs.
 x 2021-03-11 Write a dozen tests for build-interferences that predict its output.
 x 2021-03-11 Implement the build-interferences pass for X0 programs.
 x 2021-03-13 Write a dozen tests for color-graph that predict its output.
-Implement the color-graph function on arbitrary graphs.
+x 2021-03-13 Implement the color-graph function on arbitrary graphs.
 Replace assign-homes with a new pass named assign-registers and implement the stupid-allocate-registers pass for X0 programs.
 Write a dozen tests for the assign-registers that predict its output and check their behavior.
 Write a dozen tests for allocate-registers that predict its output.

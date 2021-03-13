@@ -28,7 +28,7 @@ pub struct XEnv {
     printed: Vec<Number>,
 }
 
-#[derive(Debug, strum_macros::ToString, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Debug, strum_macros::ToString, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord)]
 pub enum XRegister {
     RAX,
     RBX,
