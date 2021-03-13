@@ -8,17 +8,17 @@ use crate::{
 };
 use std::collections::HashMap;
 
-pub trait AssignHomes {
-    fn asn_homes(&self, linfo: &LocalsInfo) -> XProgram;
+pub trait AssignRegisters {
+    fn asn_registers(&self, linfo: &LocalsInfo, alloc: impl Allocator) -> XProgram;
 }
 
 trait Asn {
     fn asn(&self, renames: &HashMap<Label, XArgument>) -> Self;
 }
 
-impl AssignHomes for XProgram {
-    fn asn_homes(&self, linfo: &LocalsInfo) -> XProgram {
-        let allocation = StupidStackAllocator::allocate(self, linfo);
+impl AssignRegisters for XProgram {
+    fn asn_registers(&self, linfo: &LocalsInfo, alloc: impl Allocator) -> XProgram {
+        let allocation = alloc.allocate(self, linfo);
         let renames = allocation.variable_mapping;
         let stack_space = allocation.stack_space;
 
@@ -87,7 +87,7 @@ mod test_assign_homes {
     use pretty_assertions::assert_eq;
 
     #[test]
-    fn test_assign_homes() {
+    fn test_assign_homes_sstackalloc() {
         let tests: Vec<((XProgram, LocalsInfo), XProgram)> = vec![
             (
                 (
@@ -172,7 +172,7 @@ mod test_assign_homes {
             let expected_prog_res = expect_prog.interp();
             assert_eq!(prog_res, expected_prog_res);
 
-            let asn = prog.asn_homes(&info);
+            let asn = prog.asn_registers(&info, StupidStackAllocator {});
             let asn_res = asn.interp();
             assert_eq!(prog_res, asn_res);
             assert_eq!(asn, expect_prog);

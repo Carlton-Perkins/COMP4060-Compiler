@@ -2,7 +2,7 @@ use compiler::{
     clang::{SelectInstruction, UncoverLocals},
     common::traits::{Emit, InterpMut},
     rlang::{randp, ExplicateControl, ResolveComplex, Uniquify},
-    xlang::{AssignHomes, CompileAndRun, PatchInstructions, XInterpMut},
+    xlang::{AssignRegisters, CompileAndRun, PatchInstructions, StupidStackAllocator, XInterpMut},
 };
 
 fn main() {
@@ -34,7 +34,7 @@ fn main() {
     assert_eq!(e_ret, sel_inst_ret);
 
     // XLang
-    let asn = sel_inst.asn_homes(&local_info);
+    let asn = sel_inst.asn_registers(&local_info, StupidStackAllocator {});
     let asn_ret = asn.interp();
     assert_eq!(e_ret, asn_ret);
 

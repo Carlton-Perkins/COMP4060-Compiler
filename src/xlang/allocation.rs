@@ -8,7 +8,7 @@ use crate::{
 use std::collections::HashMap;
 
 pub trait Allocator {
-    fn allocate(blk: &XProgram, linfo: &LocalsInfo) -> Allocation;
+    fn allocate(self, blk: &XProgram, linfo: &LocalsInfo) -> Allocation;
 }
 
 pub struct Allocation {
@@ -19,7 +19,7 @@ pub struct Allocation {
 pub struct StupidStackAllocator {}
 
 impl Allocator for StupidStackAllocator {
-    fn allocate(_: &XProgram, linfo: &LocalsInfo) -> Allocation {
+    fn allocate(self, _: &XProgram, linfo: &LocalsInfo) -> Allocation {
         let var_count = linfo.len();
         let stack_space = 8
             * (if is_even(var_count) {

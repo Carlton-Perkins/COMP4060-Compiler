@@ -6,8 +6,8 @@ pub use xprog::{
 };
 
 #[allow(dead_code)]
-mod assign_homes;
-pub use assign_homes::AssignHomes;
+mod assign_registers;
+pub use assign_registers::AssignRegisters;
 
 #[allow(dead_code)]
 mod patch_instructions;

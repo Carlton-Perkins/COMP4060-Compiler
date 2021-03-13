@@ -521,8 +521,6 @@ mod test_uncover_live {
             }
 
             assert_eq!(expected_ca, ca);
-            // assert_eq!(ca.into_iter().collect::<Vec<_>>().sort(), expected_ca.into_iter().collect::<Vec<_>>().sort());
-            // assert!(false);
         }
     }
 }
