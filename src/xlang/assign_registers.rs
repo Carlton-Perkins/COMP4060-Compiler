@@ -254,6 +254,60 @@ mod test_assign_homes {
                     )
                 ),
             ),
+            (
+                (
+                    XProgram!(XBlock!(
+                        "main",
+                        Movq(XCon(1), XVar!("v")),
+                        Movq(XCon(46), XVar!("w")),
+                        Movq(XVar!("v"), XVar!("x")),
+                        Addq(XCon(7), XVar!("x")),
+                        Movq(XVar!("x"), XVar!("y")),
+                        Addq(XCon(4), XVar!("y")),
+                        Movq(XVar!("x"), XVar!("z")),
+                        Addq(XVar!("w"), XVar!("z")),
+                        Movq(XVar!("y"), XVar!("t")),
+                        Negq(XVar!("t")),
+                        Movq(XVar!("z"), XReg(RAX)),
+                        Addq(XVar!("t"), XReg(RAX)),
+                        Retq,
+                    )),
+                    vec!["v", "w", "x", "y", "t", "z"]
+                        .into_iter()
+                        .map(|x| x.into())
+                        .collect(),
+                ),
+                XProgram!(
+                    XBlock!(
+                        "main",
+                        Pushq(XReg(RBP)),
+                        Movq(XReg(RSP), XReg(RBP)),
+                        Subq(XCon(0), XReg(RSP)),
+                        Jmp(Label!("body"))
+                    ),
+                    XBlock!(
+                        "end",
+                        Movq(XReg(RAX), XReg(RDI)),
+                        Callq(Label!("_print_int")),
+                        Addq(XCon(0), XReg(RSP)),
+                        Popq(XReg(RBP)),
+                        Retq
+                    ),
+                    XBlock!(
+                        "body",
+                        Movq(XCon(1), XReg(RAX)),
+                        Movq(XCon(46), XReg(RCX)),
+                        Addq(XCon(7), XReg(RAX)),
+                        Movq(XReg(RAX), XReg(RBX)),
+                        Addq(XCon(4), XReg(RBX)),
+                        Addq(XReg(RCX), XReg(RAX)),
+                        Negq(XReg(RBX)),
+                        Addq(XReg(RBX), XReg(RAX)),
+                        Retq,
+                        Jmp(Label!("end")),
+                    )
+                ),
+            ),
         ];
 
         for ((prog, info), expect_prog) in tests {
