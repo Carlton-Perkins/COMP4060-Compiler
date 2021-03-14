@@ -2,8 +2,8 @@ use crate::{
     clang::LocalsInfo,
     common::types::{Label, Number},
     xlang::{
-        Allocator, StupidStackAllocator, XArgument, XArgument::*, XBlock, XInstruction,
-        XInstruction::*, XProgram, XRegister::*,
+        Allocator, XArgument, XArgument::*, XBlock, XInstruction, XInstruction::*, XProgram,
+        XRegister::*,
     },
 };
 use std::collections::HashMap;
@@ -83,7 +83,7 @@ impl Asn for XArgument {
 #[cfg(test)]
 mod test_assign_homes {
     use super::*;
-    use crate::xlang::XInterpMut;
+    use crate::xlang::{GraphAllocator, StupidStackAllocator, XInterpMut};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -173,6 +173,95 @@ mod test_assign_homes {
             assert_eq!(prog_res, expected_prog_res);
 
             let asn = prog.asn_registers(&info, StupidStackAllocator {});
+            let asn_res = asn.interp();
+            assert_eq!(prog_res, asn_res);
+            assert_eq!(asn, expect_prog);
+        }
+    }
+
+    #[test]
+    fn test_assign_homes_coloralloc() {
+        let tests: Vec<((XProgram, LocalsInfo), XProgram)> = vec![
+            (
+                (
+                    XProgram!(XBlock!(
+                        "main",
+                        Callq(Label!("_read_int")),
+                        Callq(Label!("_read_int")),
+                        Movq(XReg(RAX), XVar!("0")),
+                        Movq(XVar!("0"), XReg(RAX)),
+                    )),
+                    vec!["0"].into_iter().map(|x| x.into()).collect(),
+                ),
+                XProgram!(
+                    XBlock!(
+                        "main",
+                        Pushq(XReg(RBP)),
+                        Movq(XReg(RSP), XReg(RBP)),
+                        Subq(XCon(0), XReg(RSP)),
+                        Jmp(Label!("body"))
+                    ),
+                    XBlock!(
+                        "end",
+                        Movq(XReg(RAX), XReg(RDI)),
+                        Callq(Label!("_print_int")),
+                        Addq(XCon(0), XReg(RSP)),
+                        Popq(XReg(RBP)),
+                        Retq
+                    ),
+                    XBlock!(
+                        "body",
+                        Callq(Label!("_read_int")),
+                        Callq(Label!("_read_int")),
+                        Jmp(Label!("end")),
+                    )
+                ),
+            ),
+            (
+                (
+                    XProgram!(XBlock!(
+                        "main",
+                        Movq(XCon(3), XVar!("0")),    //
+                        Movq(XCon(2), XVar!("1")),    // 0
+                        Movq(XVar!("1"), XVar!("2")), // 0,1
+                        Addq(XVar!("0"), XVar!("2")), // 0,2
+                        Movq(XVar!("2"), XReg(RAX)),  // RAX
+                    )),
+                    vec!["0", "1", "2"].into_iter().map(|x| x.into()).collect(),
+                ),
+                XProgram!(
+                    XBlock!(
+                        "main",
+                        Pushq(XReg(RBP)),
+                        Movq(XReg(RSP), XReg(RBP)),
+                        Subq(XCon(0), XReg(RSP)),
+                        Jmp(Label!("body"))
+                    ),
+                    XBlock!(
+                        "end",
+                        Movq(XReg(RAX), XReg(RDI)),
+                        Callq(Label!("_print_int")),
+                        Addq(XCon(0), XReg(RSP)),
+                        Popq(XReg(RBP)),
+                        Retq
+                    ),
+                    XBlock!(
+                        "body",
+                        Movq(XCon(3), XReg(RBX)),
+                        Movq(XCon(2), XReg(RAX)),
+                        Addq(XReg(RBX), XReg(RAX)),
+                        Jmp(Label!("end")),
+                    )
+                ),
+            ),
+        ];
+
+        for ((prog, info), expect_prog) in tests {
+            let prog_res = prog.interp();
+            let expected_prog_res = expect_prog.interp();
+            assert_eq!(prog_res, expected_prog_res);
+
+            let asn = prog.asn_registers(&info, GraphAllocator {});
             let asn_res = asn.interp();
             assert_eq!(prog_res, asn_res);
             assert_eq!(asn, expect_prog);

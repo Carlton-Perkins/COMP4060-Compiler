@@ -42,3 +42,11 @@ impl Allocator for StupidStackAllocator {
         }
     }
 }
+
+pub struct GraphAllocator {}
+
+impl Allocator for GraphAllocator {
+    fn allocate(self, blk: &XProgram, linfo: &LocalsInfo) -> Allocation {
+        todo!()
+    }
+}
