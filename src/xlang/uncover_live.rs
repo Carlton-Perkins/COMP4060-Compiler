@@ -19,8 +19,8 @@ type XBlockLive = Vec<(XInstruction, LiveSet)>;
 type XProgramLive = HashMap<Label, XBlockLive>;
 type XInterfenceGraph = Graph<LiveType>;
 type XMoveGraph = Graph<LiveType>;
-type Color = usize;
-type ColorAssignment = HashMap<LiveType, Color>;
+pub type Color = usize;
+pub type ColorAssignment = HashMap<LiveType, Color>;
 
 pub trait UncoverLive {
     type LiveOut;
@@ -54,10 +54,10 @@ impl UncoverLive for XBlock {
         for inst in self.into_iter().rev() {
             let (readset, writeset) = observe(inst);
 
-            // println!("Inst: {:?}", inst);
-            // println!("Readset: {:?}", readset);
-            // println!("Writeset: {:?}", writeset);
-            // println!("Liveafter: {:?}", liveafter);
+            println!("Inst: {:?}", inst);
+            println!("Readset: {:?}", readset);
+            println!("Writeset: {:?}", writeset);
+            println!("Liveafter: {:?}", liveafter);
 
             liveafter_set.push((inst.clone(), liveafter.clone()));
             liveafter = liveafter
@@ -67,7 +67,7 @@ impl UncoverLive for XBlock {
                 .union(&readset)
                 .map(|x| x.clone())
                 .collect();
-            // println!("Livebefore: {:?}\n", liveafter);
+            println!("Livebefore: {:?}\n", liveafter);
         }
 
         // println!("---");
@@ -113,7 +113,7 @@ fn observe(inst: &XInstruction) -> (LiveSet, LiveSet) {
         XInstruction::Movq(src, dst) => (set![src], set![dst]),
         XInstruction::Retq => (set![&XArgument::XReg(XRegister::RAX)], set![]),
         XInstruction::Negq(target) => (set![target], set![target]),
-        XInstruction::Callq(_) => (set![], set![]),
+        XInstruction::Callq(_) => (set![], set![&XArgument::XReg(XRegister::RAX)]),
         XInstruction::Jmp(_) => (set![], set![]),
         XInstruction::Pushq(target) => (set![target], set![]),
         XInstruction::Popq(target) => (set![], set![target]),
@@ -137,7 +137,7 @@ fn arg_set_to_live_set(ls: &HashSet<&XArgument>) -> LiveSet {
     ls.into_iter().filter_map(|x| arg_to_live(x)).collect()
 }
 
-fn build_interferences(blk: XBlockLive) -> (XInterfenceGraph, XMoveGraph) {
+pub fn build_interferences(blk: XBlockLive) -> (XInterfenceGraph, XMoveGraph) {
     let mut igraph = XInterfenceGraph::new();
     let mut mgraph = XMoveGraph::new();
     blk.into_iter()
@@ -158,7 +158,9 @@ fn build_graph(
             let s = arg_to_live(src);
             let d = arg_to_live(dst).unwrap();
             if s.is_some() {
-                m.update_edge(&s.unwrap(), &d)
+                let su = s.unwrap();
+                g.add_vertex(&su.clone());
+                m.update_edge(&su, &d)
             };
             for v in liveafter {
                 if v != dst && v != src {
@@ -188,7 +190,7 @@ fn add_graph(graph: &mut XInterfenceGraph, liveafter: &LiveSet, arg: &XArgument)
     }
 }
 
-fn color_graph(
+pub fn color_graph(
     i_graph: &XInterfenceGraph,
     init_asn: &ColorAssignment,
     m_graph: &XMoveGraph,

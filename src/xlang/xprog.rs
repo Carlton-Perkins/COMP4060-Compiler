@@ -58,9 +58,15 @@ mod reglist {
 
     pub const CALLEE_SAVED_REGISTERS: &[XRegister] = &[RBX, RBP, R12, R13, R14, R15];
 
+    pub const USEABLE_REGISTERS: &[XRegister] = &[
+        RAX, RBX, RCX, RDX, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15,
+    ];
+
     pub const TEMP_REGISTER: XRegister = RAX;
 }
-pub use reglist::{ALL_REGISTERS, CALLEE_SAVED_REGISTERS, CALLER_SAVED_REGISTERS, TEMP_REGISTER};
+pub use reglist::{
+    ALL_REGISTERS, CALLEE_SAVED_REGISTERS, CALLER_SAVED_REGISTERS, TEMP_REGISTER, USEABLE_REGISTERS,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum XArgument {

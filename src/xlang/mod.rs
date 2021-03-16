@@ -2,7 +2,7 @@
 pub mod xprog;
 pub use xprog::{
     XArgument, XBlock, XEnv, XInstruction, XInterpMut, XProgram, XRegister, ALL_REGISTERS,
-    CALLEE_SAVED_REGISTERS, CALLER_SAVED_REGISTERS, TEMP_REGISTER,
+    CALLEE_SAVED_REGISTERS, CALLER_SAVED_REGISTERS, TEMP_REGISTER, USEABLE_REGISTERS,
 };
 
 #[allow(dead_code)]
@@ -23,3 +23,4 @@ pub use allocation::{Allocation, Allocator, GraphAllocator, StupidStackAllocator
 
 #[allow(dead_code)]
 mod uncover_live;
+pub use uncover_live::{build_interferences, color_graph, Color, ColorAssignment, LiveType};

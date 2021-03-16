@@ -19,6 +19,12 @@ where
         }
     }
 
+    pub fn add_vertex(&mut self, n: &NodeT) {
+        if !self.edges.contains_key(n) {
+            self.edges.insert(n.clone(), HashSet::new());
+        }
+    }
+
     pub fn new_edge(&mut self, n: NodeT) {
         self.edges.insert(n, HashSet::new());
     }

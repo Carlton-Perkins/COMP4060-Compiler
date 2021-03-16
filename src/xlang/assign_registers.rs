@@ -13,12 +13,14 @@ pub trait AssignRegisters {
 }
 
 trait Asn {
-    fn asn(&self, renames: &HashMap<Label, XArgument>) -> Self;
+    type RetT;
+    fn asn(&self, renames: &HashMap<Label, XArgument>) -> Self::RetT;
 }
 
 impl AssignRegisters for XProgram {
     fn asn_registers(&self, linfo: &LocalsInfo, alloc: impl Allocator) -> XProgram {
         let allocation = alloc.allocate(self, linfo);
+        println!("alloc: {:?}", allocation);
         let renames = allocation.variable_mapping;
         let stack_space = allocation.stack_space;
 
@@ -48,34 +50,54 @@ impl AssignRegisters for XProgram {
 }
 
 impl Asn for XBlock {
-    fn asn(&self, renames: &HashMap<Label, XArgument>) -> Self {
-        self.into_iter().map(|x| x.asn(renames)).collect()
+    type RetT = Self;
+    fn asn(&self, renames: &HashMap<Label, XArgument>) -> Self::RetT {
+        self.into_iter().filter_map(|x| x.asn(renames)).collect()
     }
 }
 
 impl Asn for XInstruction {
-    fn asn(&self, renames: &HashMap<Label, XArgument>) -> Self {
+    type RetT = Option<Self>;
+    fn asn(&self, renames: &HashMap<Label, XArgument>) -> Self::RetT {
         match self {
-            Addq(lh, rh) => Addq(lh.asn(renames), rh.asn(renames)),
-            Subq(lh, rh) => Subq(lh.asn(renames), rh.asn(renames)),
-            Movq(lh, rh) => Movq(lh.asn(renames), rh.asn(renames)),
-            Retq => Retq,
-            Negq(v) => Negq(v.asn(renames)),
-            Callq(l) => Callq(l.clone()),
-            Jmp(l) => Jmp(l.clone()),
-            Pushq(v) => Pushq(v.asn(renames)),
-            Popq(v) => Popq(v.asn(renames)),
+            Addq(lh, rh) => Some(Addq(lh.asn(renames), rh.asn(renames))),
+            Subq(lh, rh) => Some(Subq(lh.asn(renames), rh.asn(renames))),
+            Movq(lh, rh) => {
+                let lh_asn = lh.asn(renames);
+                let rh_asn = rh.asn(renames);
+                if lh_asn == rh_asn {
+                    None
+                } else {
+                    Some(Movq(lh_asn, rh_asn))
+                }
+            }
+            Retq => Some(Retq),
+            Negq(v) => Some(Negq(v.asn(renames))),
+            Callq(l) => Some(Callq(l.clone())),
+            Jmp(l) => Some(Jmp(l.clone())),
+            Pushq(v) => Some(Pushq(v.asn(renames))),
+            Popq(v) => Some(Popq(v.asn(renames))),
         }
     }
 }
 
 impl Asn for XArgument {
-    fn asn(&self, renames: &HashMap<Label, XArgument>) -> Self {
+    type RetT = Self;
+    fn asn(&self, renames: &HashMap<Label, XArgument>) -> Self::RetT {
         match self {
             XCon(c) => XCon(*c),
             XReg(r) => XReg(r.clone()),
             XDeref(r, offset) => XDeref(r.clone(), offset.clone()),
-            XVar(v) => renames.get(v).unwrap().clone(),
+            XVar(v) => renames
+                .get(v)
+                .expect(
+                    format!(
+                        "Variable {} does not exist in the rename set {:?}",
+                        v, renames
+                    )
+                    .as_str(),
+                )
+                .clone(),
         }
     }
 }
@@ -161,6 +183,44 @@ mod test_assign_homes {
                         Movq(XDeref(RBP, -8), XDeref(RBP, -16)),
                         Addq(XDeref(RBP, 0), XDeref(RBP, -16)),
                         Movq(XDeref(RBP, -16), XReg(RAX)),
+                        Jmp(Label!("end")),
+                    )
+                ),
+            ),
+            (
+                (
+                    XProgram!(XBlock!(
+                        "main",
+                        Callq(Label!("_read_int")),
+                        Callq(Label!("_read_int")),
+                        Movq(XReg(RAX), XVar!("0")),
+                        Movq(XReg(RAX), XReg(RAX)), // Unneeded move should be removed
+                        Movq(XVar!("0"), XReg(RAX)),
+                    )),
+                    vec!["0"].into_iter().map(|x| x.into()).collect(),
+                ),
+                XProgram!(
+                    XBlock!(
+                        "main",
+                        Pushq(XReg(RBP)),
+                        Movq(XReg(RSP), XReg(RBP)),
+                        Subq(XCon(16), XReg(RSP)),
+                        Jmp(Label!("body"))
+                    ),
+                    XBlock!(
+                        "end",
+                        Movq(XReg(RAX), XReg(RDI)),
+                        Callq(Label!("_print_int")),
+                        Addq(XCon(16), XReg(RSP)),
+                        Popq(XReg(RBP)),
+                        Retq
+                    ),
+                    XBlock!(
+                        "body",
+                        Callq(Label!("_read_int")),
+                        Callq(Label!("_read_int")),
+                        Movq(XReg(RAX), XDeref(RBP, 0)),
+                        Movq(XDeref(RBP, 0), XReg(RAX)),
                         Jmp(Label!("end")),
                     )
                 ),
