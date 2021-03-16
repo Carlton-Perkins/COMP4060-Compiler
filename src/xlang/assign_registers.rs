@@ -3,7 +3,7 @@ use crate::{
     common::types::{Label, Number},
     xlang::{
         Allocator, XArgument, XArgument::*, XBlock, XInstruction, XInstruction::*, XProgram,
-        XRegister::*,
+        XRegister::*, CALLEE_SAVED_REGISTERS,
     },
 };
 use std::collections::HashMap;
@@ -23,21 +23,39 @@ impl AssignRegisters for XProgram {
         println!("alloc: {:?}", allocation);
         let renames = allocation.variable_mapping;
         let stack_space = allocation.stack_space;
-
-        let new_main = XBlock!(
-            "main",
-            Pushq(XReg(RBP)),
-            Movq(XReg(RSP), XReg(RBP)),
-            Subq(XCon(stack_space as Number), XReg(RSP)),
-            Jmp(Label!("body"))
+        let calle_save: XBlock = CALLEE_SAVED_REGISTERS
+            .into_iter()
+            .map(|r| Pushq(XReg(r.clone())))
+            .collect();
+        let calle_restore: XBlock = CALLEE_SAVED_REGISTERS
+            .into_iter()
+            .map(|r| Popq(XReg(r.clone())))
+            .rev()
+            .collect();
+        let new_main = (
+            "main".to_string(),
+            vec![
+                calle_save,
+                vec![
+                    Movq(XReg(RSP), XReg(RBP)),
+                    Subq(XCon(stack_space as Number), XReg(RSP)),
+                    Jmp(Label!("body")),
+                ],
+            ]
+            .concat(),
         );
-        let new_end = XBlock!(
-            "end",
-            Movq(XReg(RAX), XReg(RDI)),
-            Callq(Label!("_print_int")),
-            Addq(XCon(stack_space as Number), XReg(RSP)),
-            Popq(XReg(RBP)),
-            Retq
+        let new_end = (
+            "end".to_string(),
+            vec![
+                vec![
+                    Movq(XReg(RAX), XReg(RDI)),
+                    Callq(Label!("_print_int")),
+                    Addq(XCon(stack_space as Number), XReg(RSP)),
+                ],
+                calle_restore,
+                vec![Retq],
+            ]
+            .concat(),
         );
         let body = self.get(&Label!("main")).unwrap();
         let new_body = (
@@ -106,7 +124,7 @@ impl Asn for XArgument {
 mod test_assign_homes {
     use super::*;
     use crate::xlang::{GraphAllocator, StupidStackAllocator, XInterpMut};
-    use pretty_assertions::assert_eq;
+    // use pretty_assertions::assert_eq;
 
     #[test]
     fn test_assign_homes_sstackalloc() {
@@ -125,7 +143,12 @@ mod test_assign_homes {
                 XProgram!(
                     XBlock!(
                         "main",
+                        Pushq(XReg(RBX)),
                         Pushq(XReg(RBP)),
+                        Pushq(XReg(R12)),
+                        Pushq(XReg(R13)),
+                        Pushq(XReg(R14)),
+                        Pushq(XReg(R15)),
                         Movq(XReg(RSP), XReg(RBP)),
                         Subq(XCon(16), XReg(RSP)),
                         Jmp(Label!("body"))
@@ -135,7 +158,12 @@ mod test_assign_homes {
                         Movq(XReg(RAX), XReg(RDI)),
                         Callq(Label!("_print_int")),
                         Addq(XCon(16), XReg(RSP)),
+                        Popq(XReg(R15)),
+                        Popq(XReg(R14)),
+                        Popq(XReg(R13)),
+                        Popq(XReg(R12)),
                         Popq(XReg(RBP)),
+                        Popq(XReg(RBX)),
                         Retq
                     ),
                     XBlock!(
@@ -163,7 +191,12 @@ mod test_assign_homes {
                 XProgram!(
                     XBlock!(
                         "main",
+                        Pushq(XReg(RBX)),
                         Pushq(XReg(RBP)),
+                        Pushq(XReg(R12)),
+                        Pushq(XReg(R13)),
+                        Pushq(XReg(R14)),
+                        Pushq(XReg(R15)),
                         Movq(XReg(RSP), XReg(RBP)),
                         Subq(XCon(32), XReg(RSP)),
                         Jmp(Label!("body"))
@@ -173,7 +206,12 @@ mod test_assign_homes {
                         Movq(XReg(RAX), XReg(RDI)),
                         Callq(Label!("_print_int")),
                         Addq(XCon(32), XReg(RSP)),
+                        Popq(XReg(R15)),
+                        Popq(XReg(R14)),
+                        Popq(XReg(R13)),
+                        Popq(XReg(R12)),
                         Popq(XReg(RBP)),
+                        Popq(XReg(RBX)),
                         Retq
                     ),
                     XBlock!(
@@ -202,7 +240,12 @@ mod test_assign_homes {
                 XProgram!(
                     XBlock!(
                         "main",
+                        Pushq(XReg(RBX)),
                         Pushq(XReg(RBP)),
+                        Pushq(XReg(R12)),
+                        Pushq(XReg(R13)),
+                        Pushq(XReg(R14)),
+                        Pushq(XReg(R15)),
                         Movq(XReg(RSP), XReg(RBP)),
                         Subq(XCon(16), XReg(RSP)),
                         Jmp(Label!("body"))
@@ -212,7 +255,12 @@ mod test_assign_homes {
                         Movq(XReg(RAX), XReg(RDI)),
                         Callq(Label!("_print_int")),
                         Addq(XCon(16), XReg(RSP)),
+                        Popq(XReg(R15)),
+                        Popq(XReg(R14)),
+                        Popq(XReg(R13)),
+                        Popq(XReg(R12)),
                         Popq(XReg(RBP)),
+                        Popq(XReg(RBX)),
                         Retq
                     ),
                     XBlock!(
@@ -256,7 +304,12 @@ mod test_assign_homes {
                 XProgram!(
                     XBlock!(
                         "main",
+                        Pushq(XReg(RBX)),
                         Pushq(XReg(RBP)),
+                        Pushq(XReg(R12)),
+                        Pushq(XReg(R13)),
+                        Pushq(XReg(R14)),
+                        Pushq(XReg(R15)),
                         Movq(XReg(RSP), XReg(RBP)),
                         Subq(XCon(0), XReg(RSP)),
                         Jmp(Label!("body"))
@@ -266,7 +319,12 @@ mod test_assign_homes {
                         Movq(XReg(RAX), XReg(RDI)),
                         Callq(Label!("_print_int")),
                         Addq(XCon(0), XReg(RSP)),
+                        Popq(XReg(R15)),
+                        Popq(XReg(R14)),
+                        Popq(XReg(R13)),
+                        Popq(XReg(R12)),
                         Popq(XReg(RBP)),
+                        Popq(XReg(RBX)),
                         Retq
                     ),
                     XBlock!(
@@ -292,7 +350,12 @@ mod test_assign_homes {
                 XProgram!(
                     XBlock!(
                         "main",
+                        Pushq(XReg(RBX)),
                         Pushq(XReg(RBP)),
+                        Pushq(XReg(R12)),
+                        Pushq(XReg(R13)),
+                        Pushq(XReg(R14)),
+                        Pushq(XReg(R15)),
                         Movq(XReg(RSP), XReg(RBP)),
                         Subq(XCon(0), XReg(RSP)),
                         Jmp(Label!("body"))
@@ -302,7 +365,12 @@ mod test_assign_homes {
                         Movq(XReg(RAX), XReg(RDI)),
                         Callq(Label!("_print_int")),
                         Addq(XCon(0), XReg(RSP)),
+                        Popq(XReg(R15)),
+                        Popq(XReg(R14)),
+                        Popq(XReg(R13)),
+                        Popq(XReg(R12)),
                         Popq(XReg(RBP)),
+                        Popq(XReg(RBX)),
                         Retq
                     ),
                     XBlock!(
@@ -340,7 +408,12 @@ mod test_assign_homes {
                 XProgram!(
                     XBlock!(
                         "main",
+                        Pushq(XReg(RBX)),
                         Pushq(XReg(RBP)),
+                        Pushq(XReg(R12)),
+                        Pushq(XReg(R13)),
+                        Pushq(XReg(R14)),
+                        Pushq(XReg(R15)),
                         Movq(XReg(RSP), XReg(RBP)),
                         Subq(XCon(0), XReg(RSP)),
                         Jmp(Label!("body"))
@@ -350,7 +423,12 @@ mod test_assign_homes {
                         Movq(XReg(RAX), XReg(RDI)),
                         Callq(Label!("_print_int")),
                         Addq(XCon(0), XReg(RSP)),
+                        Popq(XReg(R15)),
+                        Popq(XReg(R14)),
+                        Popq(XReg(R13)),
+                        Popq(XReg(R12)),
                         Popq(XReg(RBP)),
+                        Popq(XReg(RBX)),
                         Retq
                     ),
                     XBlock!(
