@@ -121,6 +121,6 @@ mod test_rrandp {
         assert_eq!(e_ret, patch_ret, "Randp Failure at patch ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, patch, patch_ret);
 
         let sys_ret = patch.run();
-        assert_eq!(e_ret, sys_ret, "Randp Failure at patch ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, patch, sys_ret);
+        assert_eq!(e_ret, sys_ret, "Randp Failure at sys ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, patch, sys_ret);
     }
 }
