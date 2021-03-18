@@ -20,7 +20,7 @@ trait Asn {
 impl AssignRegisters for XProgram {
     fn asn_registers(&self, linfo: &LocalsInfo, alloc: impl Allocator) -> XProgram {
         let allocation = alloc.allocate(self, linfo);
-        println!("alloc: {:?}", allocation);
+        // println!("alloc: {:?}", allocation);
         let renames = allocation.variable_mapping;
         let stack_space = allocation.stack_space;
         let calle_save: XBlock = CALLEE_SAVED_REGISTERS

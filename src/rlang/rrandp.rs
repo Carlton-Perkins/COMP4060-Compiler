@@ -75,7 +75,7 @@ mod test_rrandp {
     #[test]
     fn test_randp() {
         let max_depth = 10;
-        let iter_per_depth = 10;
+        let iter_per_depth = 100;
 
         let jobs: Vec<(usize, usize)> = (0..max_depth)
             .cartesian_product(0..iter_per_depth)
@@ -87,40 +87,40 @@ mod test_rrandp {
     fn test_random_program(depth: usize) {
         // RLang
         let e = randp(depth);
-        println!("Program: {:?}", e);
+        // println!("Program: {:?}", e);
         let e_ret = e.interp().unwrap();
 
         let u = e.uniquify();
         let u_ret = u.interp().unwrap();
-        assert_eq!(e_ret, u_ret);
+        assert_eq!(e_ret, u_ret, "Randp Failure at  uniquify ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, u, u_ret);
 
         let rco = u.resolve_complex();
         let rco_ret = rco.interp().unwrap();
-        assert_eq!(e_ret, rco_ret);
+        assert_eq!(e_ret, rco_ret, "Randp Failure at rco ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, rco, rco_ret);
 
         let econ = rco.explicate_control();
         let econ_ret = econ.interp();
-        assert_eq!(e_ret, econ_ret);
+        assert_eq!(e_ret, econ_ret, "Randp Failure at econ ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, econ, econ_ret);
 
         // CLang
         let (ul, local_info) = econ.uncover_locals();
         let ul_ret = ul.interp();
-        assert_eq!(e_ret, ul_ret);
+        assert_eq!(e_ret, ul_ret, "Randp Failure at uncover locals ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\nLocals: {:?}\n Generated return: {}\n", e, e_ret, ul, local_info, ul_ret);
 
         let sel_inst = ul.select_instr();
         let sel_inst_ret = sel_inst.interp();
-        assert_eq!(e_ret, sel_inst_ret);
+        assert_eq!(e_ret, sel_inst_ret, "Randp Failure at selinst ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, sel_inst, sel_inst_ret);
 
         // XLang
         let asn = sel_inst.asn_registers(&local_info, GraphAllocator {});
         let asn_ret = asn.interp();
-        assert_eq!(e_ret, asn_ret);
+        assert_eq!(e_ret, asn_ret, "Randp Failure at asn ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, asn, asn_ret);
 
         let patch = asn.patch();
         let patch_ret = patch.interp();
-        assert_eq!(e_ret, patch_ret);
+        assert_eq!(e_ret, patch_ret, "Randp Failure at patch ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, patch, patch_ret);
 
-        let sys_res = patch.run();
-        assert_eq!(e_ret, sys_res);
+        let sys_ret = patch.run();
+        assert_eq!(e_ret, sys_ret, "Randp Failure at patch ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, patch, sys_ret);
     }
 }

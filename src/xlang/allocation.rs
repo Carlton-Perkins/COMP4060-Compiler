@@ -55,7 +55,7 @@ impl Allocator for GraphAllocator {
     fn allocate(self, prog: &XProgram, li: &LocalsInfo) -> Allocation {
         assert!(prog.len() == 1); // this is going to end badly, but it should work for now
 
-        println!("Locals Info: {:?}", li);
+        // println!("Locals Info: {:?}", li);
         let livemap = prog.uncover_live();
         // println!("LiveMap: {:?}", livemap);
         let liveblk = livemap
@@ -98,7 +98,7 @@ impl Allocator for GraphAllocator {
                     var,
                     match reg_asn.get(color) {
                         Some(r) => XArgument::XReg(r.1),
-                        None => XArgument::XDeref(RBP, color as i64 - reg_count as i64),
+                        None => XArgument::XDeref(RBP, (color as i64 - reg_count as i64) * -8),
                     },
                 )
             })
