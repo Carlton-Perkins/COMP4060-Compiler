@@ -2,11 +2,11 @@ use compiler::{
     clang::{SelectInstruction, UncoverLocals},
     common::traits::{Emit, InterpMut},
     rlang::{randp, ExplicateControl, ResolveComplex, Uniquify},
-    xlang::{AssignRegisters, CompileAndRun, PatchInstructions, StupidStackAllocator, XInterpMut},
+    xlang::{AssignRegisters, CompileAndRun, GraphAllocator, PatchInstructions, XInterpMut},
 };
 
 fn main() {
-    let depth = 3;
+    let depth = 6;
     // RLang
     let e = randp(depth);
     println!("RProgram: \n\n{:?}\n", e);
@@ -34,7 +34,7 @@ fn main() {
     assert_eq!(e_ret, sel_inst_ret);
 
     // XLang
-    let asn = sel_inst.asn_registers(&local_info, StupidStackAllocator {});
+    let asn = sel_inst.asn_registers(&local_info, GraphAllocator {});
     let asn_ret = asn.interp();
     assert_eq!(e_ret, asn_ret);
 

@@ -52,9 +52,10 @@ impl Allocator for StupidStackAllocator {
 pub struct GraphAllocator {}
 
 impl Allocator for GraphAllocator {
-    fn allocate(self, prog: &XProgram, _: &LocalsInfo) -> Allocation {
+    fn allocate(self, prog: &XProgram, li: &LocalsInfo) -> Allocation {
         assert!(prog.len() == 1); // this is going to end badly, but it should work for now
 
+        println!("Locals Info: {:?}", li);
         let livemap = prog.uncover_live();
         // println!("LiveMap: {:?}", livemap);
         let liveblk = livemap
@@ -65,7 +66,7 @@ impl Allocator for GraphAllocator {
             .clone();
         // println!("Liveblk: {:?}", liveblk);
         // for (lab, live) in livemap {
-        let (i_graph, m_graph) = build_interferences(liveblk);
+        let (i_graph, m_graph) = build_interferences(&liveblk, &li);
         // println!("igraph: {:?}", i_graph);
         // println!("mgraph: {:?}", m_graph);
         let init_asn = USEABLE_REGISTERS
@@ -88,15 +89,31 @@ impl Allocator for GraphAllocator {
         // println!("Varasn: {:?}", var_asn);
         // println!("Regasn: {:?}", reg_asn);
         reg_asn.sort_by_key(|(col, _)| col.clone());
+        let reg_count = init_asn.len();
         let var_final_asn = var_asn
+            .clone()
             .into_iter()
-            .map(|(var, color)| (var, XArgument::XReg(reg_asn.get(color).unwrap().1)))
+            .map(|(var, color)| {
+                (
+                    var,
+                    match reg_asn.get(color) {
+                        Some(r) => XArgument::XReg(r.1),
+                        None => XArgument::XDeref(RBP, color as i64 - reg_count as i64),
+                    },
+                )
+            })
             .collect();
+
+        let stack_size = var_asn
+            .into_iter()
+            .filter(|(_, color)| color >= &reg_count)
+            .count();
+        let stack_space = (stack_size * 8) + (if (stack_size * 8) % 16 != 0 { 8 } else { 0 });
 
         // }
         Allocation {
             variable_mapping: var_final_asn,
-            stack_space: 0,
+            stack_space,
         }
     }
 }

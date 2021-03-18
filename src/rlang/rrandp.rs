@@ -66,9 +66,7 @@ mod test_rrandp {
         clang::{SelectInstruction, UncoverLocals},
         common::traits::InterpMut,
         rlang::{ExplicateControl, ResolveComplex, Uniquify},
-        xlang::{
-            AssignRegisters, CompileAndRun, PatchInstructions, StupidStackAllocator, XInterpMut,
-        },
+        xlang::{AssignRegisters, CompileAndRun, GraphAllocator, PatchInstructions, XInterpMut},
     };
     use itertools::Itertools;
     use pretty_assertions::assert_eq;
@@ -114,7 +112,7 @@ mod test_rrandp {
         assert_eq!(e_ret, sel_inst_ret);
 
         // XLang
-        let asn = sel_inst.asn_registers(&local_info, StupidStackAllocator {});
+        let asn = sel_inst.asn_registers(&local_info, GraphAllocator {});
         let asn_ret = asn.interp();
         assert_eq!(e_ret, asn_ret);
 

@@ -1,6 +1,7 @@
 use itertools::Itertools;
 
 use crate::{
+    clang::LocalsInfo,
     common::{
         types::{Label, Variable},
         Graph,
@@ -54,10 +55,10 @@ impl UncoverLive for XBlock {
         for inst in self.into_iter().rev() {
             let (readset, writeset) = observe(inst);
 
-            println!("Inst: {:?}", inst);
-            println!("Readset: {:?}", readset);
-            println!("Writeset: {:?}", writeset);
-            println!("Liveafter: {:?}", liveafter);
+            // println!("Inst: {:?}", inst);
+            // println!("Readset: {:?}", readset);
+            // println!("Writeset: {:?}", writeset);
+            // println!("Liveafter: {:?}", liveafter);
 
             liveafter_set.push((inst.clone(), liveafter.clone()));
             liveafter = liveafter
@@ -67,7 +68,7 @@ impl UncoverLive for XBlock {
                 .union(&readset)
                 .map(|x| x.clone())
                 .collect();
-            println!("Livebefore: {:?}\n", liveafter);
+            // println!("Livebefore: {:?}\n", liveafter);
         }
 
         // println!("---");
@@ -137,9 +138,11 @@ fn arg_set_to_live_set(ls: &HashSet<&XArgument>) -> LiveSet {
     ls.into_iter().filter_map(|x| arg_to_live(x)).collect()
 }
 
-pub fn build_interferences(blk: XBlockLive) -> (XInterfenceGraph, XMoveGraph) {
+pub fn build_interferences(blk: &XBlockLive, li: &LocalsInfo) -> (XInterfenceGraph, XMoveGraph) {
     let mut igraph = XInterfenceGraph::new();
     let mut mgraph = XMoveGraph::new();
+    li.into_iter()
+        .for_each(|x| igraph.add_vertex(&LiveType::Var(x.into())));
     blk.into_iter()
         .for_each(|(inst, liveafter)| build_graph(&inst, &liveafter, &mut igraph, &mut mgraph));
     (igraph, mgraph)
@@ -210,13 +213,13 @@ pub fn color_graph(
 
     // While there are variables left that need assigning
     while !vars_left.is_empty() {
-        println!("VarsLeft: {:?}", vars_left);
+        // println!("VarsLeft: {:?}", vars_left);
         // Ensure the list is always sorted by newest saturation information
         vars_left.sort_by_key(|x| sat(x, &asn, i_graph));
 
         // Take the largest saturation variable
         let var = vars_left.pop().unwrap();
-        println!("Took var {:?} with sat {}", var, sat(var, &asn, i_graph));
+        // println!("Took var {:?} with sat {}", var, sat(var, &asn, i_graph));
 
         // Compute the moves related to the current variable
         let moves = m_graph
@@ -238,7 +241,7 @@ pub fn color_graph(
             // If i does not conflict
             if !conflicts.contains(&i) {
                 // Then assign it color i
-                println!("Assigned {:?} color {}", var, i);
+                // println!("Assigned {:?} color {}", var, i);
                 asn.insert(var.clone(), i);
                 break;
             }
@@ -434,7 +437,7 @@ mod test_uncover_live {
             println!("ExpectedIGraph: {:?}", expectedigraph);
             println!("ExpectedMGraph: {:?}", expectedmgraph);
             let live_set = start.uncover_live();
-            let (interfere, moves) = build_interferences(live_set);
+            let (interfere, moves) = build_interferences(&live_set, &LocalsInfo::new());
             assert_eq!(interfere.edges, expectedigraph.edges);
             assert_eq!(moves.edges, expectedmgraph.edges);
         }
