@@ -384,6 +384,7 @@ mod test_assign_homes {
             ),
             (
                 (
+                    // Move Bias test
                     XProgram!(XBlock!(
                         "main",
                         Movq(XCon(1), XVar!("v")),
