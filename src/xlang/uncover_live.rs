@@ -198,7 +198,7 @@ pub fn color_graph(
     init_asn: &ColorAssignment,
     m_graph: &XMoveGraph,
 ) -> ColorAssignment {
-    // Collect initical assignment
+    // Collect init assignment
     let mut asn = init_asn.clone();
 
     // Compute remaining variables that need assignement
