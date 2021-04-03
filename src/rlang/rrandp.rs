@@ -73,6 +73,7 @@ mod test_rrandp {
     use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
     #[test]
+    #[cfg_attr(tarpaulin, ignore)]
     fn test_randp() {
         let max_depth = 10;
         let iter_per_depth = 100;
