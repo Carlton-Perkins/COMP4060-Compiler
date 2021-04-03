@@ -65,7 +65,7 @@ x 2021-03-18 Extend your build-interferences pass to construct a move-graph.
 x 2021-03-18 Extend your color-graph function to incorporate move-biasing with an optional input argument.
 x 2021-03-18 Update your allocate-registers pass to make use of the move-biasing feature of color-graph.
 x 2021-04-03 Extend your data types from R1 to R2.
-Extend your pretty printer from R1 to R2.
+x 2021-04-03 Extend your pretty printer from R1 to R2.
 Write a dozen test R2 programs.
 Extend your interpreter from R1 to R2.
 Write type-checker tests for R2.
