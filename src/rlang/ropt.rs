@@ -72,6 +72,18 @@ impl Opt for RExpr {
                 Some(e) => e.clone(),
                 None => RVar(id.clone()),
             },
+            RTrue => {
+                todo!("R1 -> R2")
+            }
+            RFalse => {
+                todo!("R1 -> R2")
+            }
+            RCmp(_, _, _) => {
+                todo!("R1 -> R2")
+            }
+            RIf(_, _, _) => {
+                todo!("R1 -> R2")
+            }
         }
     }
 

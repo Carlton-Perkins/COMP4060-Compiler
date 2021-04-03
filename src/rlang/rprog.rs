@@ -5,6 +5,12 @@ use std::collections::HashMap;
 pub type RProgram = RExpr;
 use RExpr::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RType {
+    S64,
+    Bool,
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum RExpr {
     RNum(i64),
@@ -13,6 +19,19 @@ pub enum RExpr {
     RAdd(Box<RExpr>, Box<RExpr>),
     RLet(Variable, Box<RExpr>, Box<RExpr>),
     RVar(Variable),
+    RTrue,
+    RFalse,
+    RCmp(RCMP, Box<RExpr>, Box<RExpr>),
+    RIf(Box<RExpr>, Box<RExpr>, Box<RExpr>),
+}
+
+#[derive(Debug, PartialEq, Clone, Copy, Eq)]
+pub enum RCMP {
+    EQ,
+    LT,
+    LEQ,
+    REQ,
+    RT,
 }
 
 pub struct REnv {
@@ -38,6 +57,18 @@ impl IsPure for RExpr {
             RAdd(lh, rh) => lh.is_pure() && rh.is_pure(),
             RLet(_, ve, be) => ve.is_pure() && be.is_pure(),
             RVar(_) => true,
+            RTrue => {
+                todo!("R1 -> R2")
+            }
+            RFalse => {
+                todo!("R1 -> R2")
+            }
+            RCmp(_, _, _) => {
+                todo!("R1 -> R2")
+            }
+            RIf(_, _, _) => {
+                todo!("R1 -> R2")
+            }
         }
     }
 }
@@ -65,6 +96,19 @@ impl InterpMut for RExpr {
                 Some(var) => Ok(*var),
                 None => Err(format!("RInterp: Unbound variable {:?}", n)),
             },
+
+            RTrue => {
+                todo!("R1 -> R2")
+            }
+            RFalse => {
+                todo!("R1 -> R2")
+            }
+            RCmp(_, _, _) => {
+                todo!("R1 -> R2")
+            }
+            RIf(_, _, _) => {
+                todo!("R1 -> R2")
+            }
         }
     }
 

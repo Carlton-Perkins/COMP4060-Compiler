@@ -64,6 +64,18 @@ impl ResolveComplex for RProgram {
                 .get(v)
                 .expect(format!("RCO: Unbound var {:?}", v).as_str())
                 .clone(),
+            RTrue => {
+                todo!("R1 -> R2")
+            }
+            RFalse => {
+                todo!("R1 -> R2")
+            }
+            RCmp(_, _, _) => {
+                todo!("R1 -> R2")
+            }
+            RIf(_, _, _) => {
+                todo!("R1 -> R2")
+            }
         }
     }
 }
