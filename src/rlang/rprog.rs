@@ -25,6 +25,7 @@ pub enum RExpr {
     RBool(bool),
     RCmp(RCMP, Box<RExpr>, Box<RExpr>),
     RIf(Box<RExpr>, Box<RExpr>, Box<RExpr>),
+    RNot(Box<RExpr>),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq)]
@@ -67,6 +68,9 @@ impl IsPure for RExpr {
                 todo!("R1 -> R2")
             }
             RBool(_) => {
+                todo!("R1 -> R2")
+            }
+            RNot(_) => {
                 todo!("R1 -> R2")
             }
         }
@@ -119,6 +123,7 @@ impl InterpMut for RExpr {
                 }
             }
             RBool(b) => Ok(Answer::Bool(*b)),
+            RNot(be) => Ok(!be.interp_(env)?),
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    ops::{Add, Mul},
+    ops::{Add, Mul, Not},
     str::FromStr,
 };
 
@@ -40,6 +40,16 @@ impl Mul for Answer {
     }
 }
 
+impl Not for Answer {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Answer::Bool(b) => Answer::Bool(!b),
+            _ => panic!("Tried to not a {:?}", self),
+        }
+    }
+}
 impl Display for Answer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

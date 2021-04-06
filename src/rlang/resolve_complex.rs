@@ -73,6 +73,9 @@ impl ResolveComplex for RProgram {
             RIf(_, _, _) => {
                 todo!("R1 -> R2")
             }
+            RNot(_) => {
+                todo!("R1 -> R2")
+            }
         }
     }
 }

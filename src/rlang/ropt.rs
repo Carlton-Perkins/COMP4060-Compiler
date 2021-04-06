@@ -81,6 +81,9 @@ impl Opt for RExpr {
             RIf(_, _, _) => {
                 todo!("R1 -> R2")
             }
+            RNot(_) => {
+                todo!("R1 -> R2")
+            }
         }
     }
 
@@ -192,6 +195,40 @@ mod test_ropt {
                 ),
                 RAdd(Box::new(RNum(5)), Box::new(RRead)),
                 S64(5),
+            ),
+        ];
+
+        a_opt_all(test_expr);
+    }
+
+    #[test]
+    fn test_opt_r2() {
+        let test_expr = vec![
+            (RBool(true), RBool(true), Bool(true)),
+            (RNot!(RBool(true)), RBool(false), Bool(false)),
+            (REQ!(RNum(5), RNum(5)), RBool(true), Bool(true)),
+            (RLEQ!(RNum(5), RNum(5)), RBool(true), Bool(true)),
+            (RLEQ!(RNum(5), RRead), RLEQ!(RNum(5), RRead), Bool(false)),
+            (RIf!(RBool(true), RNum(5), RNum(-8)), RNum(5), S64(5)),
+            (
+                RNot!(RIf!(RBool(true), RNum(5), RNum(-8))),
+                RNum(-8),
+                S64(-8),
+            ),
+            (
+                RNot!(RIf!(RBool(true), RNum(5), RRead)),
+                RIf!(RBool(false), RNum(5), RRead),
+                S64(-8),
+            ),
+            (
+                RIf!(REQ!(RNum(5), RNum(5)), RNum(5), RNum(-8)),
+                RNum(5),
+                S64(5),
+            ),
+            (
+                RIf!(REQ!(RNum(5), RRead), RNum(5), RNum(-8)),
+                RIf!(REQ!(RNum(5), RRead), RNum(5), RNum(-8)),
+                S64(-8),
             ),
         ];
 

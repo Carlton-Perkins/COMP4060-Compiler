@@ -75,6 +75,10 @@ impl TypeCheck for RProgram {
                     }
                 }
             }
+            RNot(b) => match b.typec_(env)? {
+                S64 => Err(TypeCheckError {}),
+                Bool => Ok(Bool),
+            },
         }
     }
 }

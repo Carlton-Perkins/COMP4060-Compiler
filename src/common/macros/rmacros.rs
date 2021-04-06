@@ -96,7 +96,7 @@ macro_rules! RFalse {
 
 macro_rules! RNot {
     ($e:expr) => {
-        crate::rlang::RExpr::RIf(Box::new($e), Box::new(RFalse!()), Box::new(RTrue!()))
+        crate::rlang::RExpr::RNot(Box::new($e))
     };
 }
 
@@ -150,14 +150,7 @@ mod test_rmacros {
                     Box::new(RBool(false)),
                 ),
             ),
-            (
-                RNot!(RTrue!()),
-                RIf(
-                    Box::new(RBool(true)),
-                    Box::new(RBool(false)),
-                    Box::new(RBool(true)),
-                ),
-            ),
+            (RNot!(RTrue!()), RNot(Box::new(RBool(true)))),
         ];
 
         for (e, me) in tests {
