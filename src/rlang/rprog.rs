@@ -34,8 +34,6 @@ pub enum RCMP {
     LEQ,
     GEQ,
     GT,
-    AND,
-    OR,
 }
 
 pub struct REnv {
@@ -79,6 +77,10 @@ impl InterpMut for RExpr {
     type Env = REnv;
     type Output = Result<Answer, String>;
 
+    fn interp(&self) -> Self::Output {
+        self.interp_(&mut REnv::new())
+    }
+
     fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
             RNum(n) => Ok(Answer::S64(*n)),
@@ -98,20 +100,26 @@ impl InterpMut for RExpr {
                 Some(var) => Ok(*var),
                 None => Err(format!("RInterp: Unbound variable {:?}", n)),
             },
-            RCmp(_, _, _) => {
-                todo!("R1 -> R2")
+            RCmp(cmp, l, r) => Ok(Answer::Bool(match cmp {
+                RCMP::EQ => l.interp_(env)? == r.interp_(env)?,
+                RCMP::LT => l.interp_(env)? < r.interp_(env)?,
+                RCMP::LEQ => l.interp_(env)? <= r.interp_(env)?,
+                RCMP::GEQ => l.interp_(env)? >= r.interp_(env)?,
+                RCMP::GT => l.interp_(env)? > r.interp_(env)?,
+            })),
+            RIf(c, t, f) => {
+                if let Answer::Bool(cond) = c.interp_(env)? {
+                    if cond {
+                        t.interp_(env)
+                    } else {
+                        f.interp_(env)
+                    }
+                } else {
+                    Err(format!("RInterp: If condition not bool, {:?}", c))
+                }
             }
-            RIf(_, _, _) => {
-                todo!("R1 -> R2")
-            }
-            RBool(_) => {
-                todo!("R1 -> R2")
-            }
+            RBool(b) => Ok(Answer::Bool(*b)),
         }
-    }
-
-    fn interp(&self) -> Self::Output {
-        self.interp_(&mut REnv::new())
     }
 }
 
@@ -259,14 +267,6 @@ mod test_rprog {
             (RTrue!(), Bool(true)),
             (RNot!(RTrue!()), Bool(false)),
             (RNot!(RFalse!()), Bool(true)),
-            (RAnd!(RFalse!(), RFalse!()), Bool(false)),
-            (RAnd!(RFalse!(), RTrue!()), Bool(false)),
-            (RAnd!(RTrue!(), RFalse!()), Bool(false)),
-            (RAnd!(RTrue!(), RTrue!()), Bool(true)),
-            (ROr!(RFalse!(), RFalse!()), Bool(false)),
-            (ROr!(RFalse!(), RTrue!()), Bool(true)),
-            (ROr!(RTrue!(), RFalse!()), Bool(true)),
-            (ROr!(RTrue!(), RTrue!()), Bool(true)),
         ];
 
         a_interp_all(tests);

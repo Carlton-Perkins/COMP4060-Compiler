@@ -12,7 +12,7 @@ pub type Label = String;
 pub type Address = usize;
 pub type AddressOffset = isize;
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, PartialOrd, Ord)]
 pub enum Answer {
     S64(Number),
     Bool(bool),
