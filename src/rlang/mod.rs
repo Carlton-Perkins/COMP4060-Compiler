@@ -21,3 +21,6 @@ pub use resolve_complex::{RCEnv, ResolveComplex};
 #[allow(dead_code)]
 mod explicate_control;
 pub use explicate_control::{ECEnv, ExplicateControl};
+
+#[allow(dead_code)]
+mod type_check;
