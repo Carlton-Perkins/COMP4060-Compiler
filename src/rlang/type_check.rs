@@ -4,20 +4,20 @@ use crate::{
 };
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-enum Type {
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub enum Type {
     S64,
     Bool,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-struct TypeCheckError {}
+pub struct TypeCheckError {}
 
-struct TypeCheckEnv {
+pub struct TypeCheckEnv {
     var_type: HashMap<Variable, Type>,
 }
 
-trait TypeCheck {
+pub trait TypeCheck {
     fn typec(&self) -> Result<Type, TypeCheckError>;
     fn typec_(&self, env: &mut TypeCheckEnv) -> Result<Type, TypeCheckError>;
 }

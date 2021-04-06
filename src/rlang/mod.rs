@@ -24,3 +24,4 @@ pub use explicate_control::{ECEnv, ExplicateControl};
 
 #[allow(dead_code)]
 mod type_check;
+pub use type_check::{Type, TypeCheck};

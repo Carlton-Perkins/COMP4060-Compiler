@@ -24,7 +24,7 @@ impl Add for Answer {
     fn add(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Answer::S64(l), Answer::S64(r)) => Answer::S64(l + r),
-            _ => unimplemented!(),
+            _ => panic!("Tried to add a {:?} and a {:?}", self, rhs),
         }
     }
 }
@@ -35,7 +35,7 @@ impl Mul for Answer {
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Answer::S64(l), Answer::S64(r)) => Answer::S64(l * r),
-            _ => unimplemented!(),
+            _ => panic!("Tried to mult a {:?} and a {:?}", self, rhs),
         }
     }
 }

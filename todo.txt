@@ -70,7 +70,7 @@ x 2021-04-06 Write a dozen test R2 programs.
 x 2021-04-06 Extend your interpreter from R1 to R2.
 x 2021-04-06 Write type-checker tests for R2.
 x 2021-04-06 Write a type-checker for R2.
-Extend your random generation function from R1 to R2.
+x 2021-04-06 Extend your random generation function from R1 to R2.
 Write some R2-specific optimizer tests.
 Extend your optimizer from R1 to R2.
 Extend the uniquify pass from R1 to R2 programs, with a few test cases to check its output.

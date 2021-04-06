@@ -1,62 +1,122 @@
+use std::collections::HashMap;
+
 use crate::{
     common::types::Variable,
-    rlang::{RExpr, RExpr::*},
+    rlang::{RExpr, RExpr::*, Type, RCMP},
 };
 use rand::prelude::*;
 
+const RAND_TYPES: &[Type] = &[Type::S64, Type::Bool];
+const RAND_CMP: &[RCMP] = &[RCMP::EQ, RCMP::LT, RCMP::LEQ, RCMP::GEQ, RCMP::GT];
 #[derive(Clone)]
 pub struct RandEnv {
-    vars: Vec<Variable>,
+    var_c: usize,
+    vars: HashMap<Type, Vec<Variable>>,
 }
 
 impl RandEnv {
     pub fn new() -> Self {
-        RandEnv { vars: Vec::new() }
+        let mut vars = HashMap::new();
+        RAND_TYPES.into_iter().for_each(|x| {
+            vars.insert(*x, Vec::<Variable>::new());
+        });
+        RandEnv { vars, var_c: 0 }
     }
 }
 
 pub fn randp(depth: usize) -> RExpr {
-    randp_(depth, &RandEnv::new())
+    let t = rand_type();
+    println!("RandP Type: {:?}", t);
+    randp_(depth, &t, &mut RandEnv::new())
 }
 
-fn randp_(depth: usize, env: &RandEnv) -> RExpr {
-    type DoType = Box<dyn Fn(usize, &RandEnv) -> RExpr>;
-    let do_read = |_: usize, _: &RandEnv| -> RExpr { RRead };
-    let do_num = |_: usize, _: &RandEnv| -> RExpr { RNum(random::<i8>() as i64) };
-    let do_var = |_: usize, env: &RandEnv| -> RExpr {
+fn randp_(depth: usize, ty: &Type, env: &mut RandEnv) -> RExpr {
+    type DoType = Box<dyn Fn(usize, &Type, &mut RandEnv) -> RExpr>;
+    let do_read = |_: usize, _: &Type, _: &mut RandEnv| -> RExpr { RRead };
+    let do_num = |_: usize, _: &Type, _: &mut RandEnv| -> RExpr { RNum(random::<i8>() as i64) };
+    let do_var = |_: usize, ty: &Type, env: &mut RandEnv| -> RExpr {
         let mut rng = thread_rng();
-        RVar((env.vars.choose(&mut rng).unwrap()).to_string())
+        let vars = env.vars.get(&ty).unwrap();
+        RVar((vars.choose(&mut rng).unwrap()).to_string())
     };
-    let mut do_dzero: Vec<DoType> = vec![Box::new(do_read), Box::new(do_num)];
-    if env.vars.len() > 0 {
+    let do_bool = |_: usize, _: &Type, _: &mut RandEnv| -> RExpr { RBool(random::<bool>()) };
+
+    let mut do_dzero: Vec<DoType> = match ty {
+        Type::S64 => {
+            vec![Box::new(do_read), Box::new(do_num)]
+        }
+        Type::Bool => {
+            vec![Box::new(do_bool)]
+        }
+    };
+    if env.vars.get(ty).unwrap().len() > 0 {
         do_dzero.push(Box::new(do_var))
     }
 
-    let do_add = |depth: usize, env: &RandEnv| -> RExpr {
+    let do_add = |depth: usize, _: &Type, env: &mut RandEnv| -> RExpr {
         RAdd(
-            Box::new(randp_(depth - 1, env)),
-            Box::new(randp_(depth - 1, env)),
+            Box::new(randp_(depth - 1, &Type::S64, env)),
+            Box::new(randp_(depth - 1, &Type::S64, env)),
         )
     };
-    let do_negate =
-        |depth: usize, env: &RandEnv| -> RExpr { RNegate(Box::new(randp_(depth - 1, env))) };
-    let do_let = |depth: usize, env: &RandEnv| -> RExpr {
+    let do_negate = |depth: usize, _: &Type, env: &mut RandEnv| -> RExpr {
+        RNegate(Box::new(randp_(depth - 1, &Type::S64, env)))
+    };
+    let do_let = |depth: usize, ty: &Type, env: &mut RandEnv| -> RExpr {
+        let new_var = env.var_c.to_string();
+        env.var_c += 1;
         let mut new_env = env.clone();
-        let new_var = new_env.vars.len().to_string();
-        new_env.vars.push(new_var.clone());
+        let mut new_var_vec = new_env.vars.get(&ty).unwrap().clone();
+        new_var_vec.push(new_var.clone());
+        new_env.vars.insert(*ty, new_var_vec);
         RLet(
             new_var,
-            Box::new(randp_(depth - 1, env)),
-            Box::new(randp_(depth - 1, &new_env)),
+            Box::new(randp_(depth - 1, ty, env)),
+            Box::new(randp_(depth - 1, ty, &mut new_env)),
         )
     };
-    let do_dn: Vec<DoType> = vec![Box::new(do_add), Box::new(do_negate), Box::new(do_let)];
+    let do_cmp = |depth: usize, _: &Type, env: &mut RandEnv| -> RExpr {
+        let cmp = rand_cmp();
+        let inner_type = rand_type();
+        let lh = randp_(depth - 1, &inner_type, env);
+        let rh = randp_(depth - 1, &inner_type, env);
+        RCmp(cmp, Box::new(lh), Box::new(rh))
+    };
+    let do_if = |depth: usize, ty: &Type, env: &mut RandEnv| -> RExpr {
+        RIf!(
+            randp_(depth - 1, &Type::Bool, env),
+            randp_(depth - 1, ty, env),
+            randp_(depth - 1, ty, env)
+        )
+    };
+
+    let do_dn: Vec<DoType> = match ty {
+        Type::S64 => {
+            vec![
+                Box::new(do_add),
+                Box::new(do_negate),
+                Box::new(do_let),
+                Box::new(do_if),
+            ]
+        }
+        Type::Bool => {
+            vec![Box::new(do_let), Box::new(do_if), Box::new(do_cmp)]
+        }
+    };
 
     let mut rng = thread_rng();
     match depth {
-        0 => do_dzero.choose(&mut rng).unwrap()(0, env),
-        n => do_dn.choose(&mut rng).unwrap()(n, env),
+        0 => do_dzero.choose(&mut rng).unwrap()(0, ty, env),
+        n => do_dn.choose(&mut rng).unwrap()(n, ty, env),
     }
+}
+
+fn rand_type() -> Type {
+    *RAND_TYPES.choose(&mut thread_rng()).unwrap()
+}
+
+fn rand_cmp() -> RCMP {
+    *RAND_CMP.choose(&mut thread_rng()).unwrap()
 }
 
 #[cfg(test)]
