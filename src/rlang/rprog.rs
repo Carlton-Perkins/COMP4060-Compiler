@@ -1,5 +1,8 @@
-pub use crate::common::traits::{InterpMut, IsPure};
-use crate::common::types::{Number, Variable};
+use crate::common::types::Variable;
+pub use crate::common::{
+    traits::{InterpMut, IsPure},
+    types::Answer,
+};
 use std::collections::HashMap;
 
 pub type RProgram = RExpr;
@@ -19,8 +22,7 @@ pub enum RExpr {
     RAdd(Box<RExpr>, Box<RExpr>),
     RLet(Variable, Box<RExpr>, Box<RExpr>),
     RVar(Variable),
-    RTrue,
-    RFalse,
+    RBool(bool),
     RCmp(RCMP, Box<RExpr>, Box<RExpr>),
     RIf(Box<RExpr>, Box<RExpr>, Box<RExpr>),
 }
@@ -30,13 +32,15 @@ pub enum RCMP {
     EQ,
     LT,
     LEQ,
-    REQ,
-    RT,
+    GEQ,
+    GT,
+    AND,
+    OR,
 }
 
 pub struct REnv {
     read_count: isize,
-    vars: HashMap<Variable, Number>,
+    vars: HashMap<Variable, Answer>,
 }
 
 impl REnv {
@@ -57,16 +61,14 @@ impl IsPure for RExpr {
             RAdd(lh, rh) => lh.is_pure() && rh.is_pure(),
             RLet(_, ve, be) => ve.is_pure() && be.is_pure(),
             RVar(_) => true,
-            RTrue => {
-                todo!("R1 -> R2")
-            }
-            RFalse => {
-                todo!("R1 -> R2")
-            }
+
             RCmp(_, _, _) => {
                 todo!("R1 -> R2")
             }
             RIf(_, _, _) => {
+                todo!("R1 -> R2")
+            }
+            RBool(_) => {
                 todo!("R1 -> R2")
             }
         }
@@ -75,17 +77,17 @@ impl IsPure for RExpr {
 
 impl InterpMut for RExpr {
     type Env = REnv;
-    type Output = Result<Number, String>;
+    type Output = Result<Answer, String>;
 
     fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            RNum(n) => Ok(*n),
+            RNum(n) => Ok(Answer::S64(*n)),
             RRead => {
                 let res = env.read_count as i64;
                 env.read_count += 1;
-                Ok(res)
+                Ok(Answer::S64(res))
             }
-            RNegate(ex) => Ok(-1 * ex.interp_(env)?),
+            RNegate(ex) => Ok(Answer::S64(-1) * ex.interp_(env)?),
             RAdd(lh, rh) => Ok(lh.interp_(env)? + rh.interp_(env)?),
             RLet(v, ve, be) => {
                 let value = ve.interp_(env)?;
@@ -96,17 +98,13 @@ impl InterpMut for RExpr {
                 Some(var) => Ok(*var),
                 None => Err(format!("RInterp: Unbound variable {:?}", n)),
             },
-
-            RTrue => {
-                todo!("R1 -> R2")
-            }
-            RFalse => {
-                todo!("R1 -> R2")
-            }
             RCmp(_, _, _) => {
                 todo!("R1 -> R2")
             }
             RIf(_, _, _) => {
+                todo!("R1 -> R2")
+            }
+            RBool(_) => {
                 todo!("R1 -> R2")
             }
         }
@@ -121,14 +119,15 @@ impl InterpMut for RExpr {
 mod test_rprog {
     use super::*;
     use pretty_assertions::assert_eq;
+    use Answer::*;
 
-    fn a_interp(expr: RProgram, expect: Number) {
+    fn a_interp(expr: RProgram, expect: Answer) {
         let res_opt = expr.interp();
         match res_opt {
             Ok(res) => {
                 assert_eq!(
                     res, expect,
-                    "Program {:?} does not eval to {}, but instead {}",
+                    "Program {:?} does not eval to {:?}, but instead {:?}",
                     expr, expect, res
                 );
             }
@@ -138,7 +137,7 @@ mod test_rprog {
         }
     }
 
-    fn a_interp_all(vec: Vec<(RProgram, Number)>) {
+    fn a_interp_all(vec: Vec<(RProgram, Answer)>) {
         for (e, ex) in vec {
             a_interp(e, ex)
         }
@@ -147,35 +146,35 @@ mod test_rprog {
     #[test]
     fn test_r0() {
         let tests = vec![
-            (RNum(5), 5),
-            (RNum(-5), -5),
-            (RAdd(Box::new(RNum(5)), Box::new(RNum(6))), 11),
-            (RAdd!(RNum(5), RNum(6)), 11),
-            (RAdd(Box::new(RRead), Box::new(RRead)), 1),
-            (RAdd!(RRead, RRead), 1),
-            (RRead, 0),
-            (RNegate(Box::new(RNum(5))), -5),
-            (RNegate!(RNum(5)), -5),
+            (RNum(5), S64(5)),
+            (RNum(-5), S64(-5)),
+            (RAdd(Box::new(RNum(5)), Box::new(RNum(6))), S64(11)),
+            (RAdd!(RNum(5), RNum(6)), S64(11)),
+            (RAdd(Box::new(RRead), Box::new(RRead)), S64(1)),
+            (RAdd!(RRead, RRead), S64(1)),
+            (RRead, S64(0)),
+            (RNegate(Box::new(RNum(5))), S64(-5)),
+            (RNegate!(RNum(5)), S64(-5)),
             (
                 RAdd(Box::new(RNum(5)), Box::new(RNegate(Box::new(RNum(6))))),
-                -1,
+                S64(-1),
             ),
-            (RAdd!(RNum(5), RNegate!(RNum(6))), -1),
+            (RAdd!(RNum(5), RNegate!(RNum(6))), S64(-1)),
             (
                 RAdd(Box::new(RRead), Box::new(RNegate(Box::new(RNum(6))))),
-                -6,
+                S64(-6),
             ),
-            (RAdd!(RRead, RNegate!(RNum(6))), -6),
+            (RAdd!(RRead, RNegate!(RNum(6))), S64(-6)),
             (
                 RNegate(Box::new(RNegate(Box::new(RNegate(Box::new(RNum(6))))))),
-                -6,
+                S64(-6),
             ),
-            (RNegate!(RNegate!(RNegate!(RNum(6)))), -6),
+            (RNegate!(RNegate!(RNegate!(RNum(6)))), S64(-6)),
             (
                 RNegate(Box::new(RNegate(Box::new(RNegate(Box::new(RNum(0))))))),
-                0,
+                S64(0),
             ),
-            (RNegate!(RNegate!(RNegate!(RNum(0)))), 0),
+            (RNegate!(RNegate!(RNegate!(RNum(0)))), S64(0)),
         ];
 
         a_interp_all(tests);
@@ -184,8 +183,8 @@ mod test_rprog {
     #[test]
     fn test_r1() {
         let tests = vec![
-            (RLet("0".into(), Box::new(RNum(0)), Box::new(RRead)), 0),
-            (RLet!("0", RNum(0), RRead), 0),
+            (RLet("0".into(), Box::new(RNum(0)), Box::new(RRead)), S64(0)),
+            (RLet!("0", RNum(0), RRead), S64(0)),
             (
                 RLet(
                     "0".into(),
@@ -196,9 +195,9 @@ mod test_rprog {
                         Box::new(RVar("0".into())),
                     )),
                 ),
-                1,
+                S64(1),
             ),
-            (RLet!("0", RNum(0), RLet!("0", RNum(1), RVar!("0"))), 1),
+            (RLet!("0", RNum(0), RLet!("0", RNum(1), RVar!("0"))), S64(1)),
             (
                 RLet(
                     "0".into(),
@@ -209,7 +208,7 @@ mod test_rprog {
                         Box::new(RAdd(Box::new(RVar("0".into())), Box::new(RVar("1".into())))),
                     )),
                 ),
-                9,
+                S64(9),
             ),
             (
                 RLet!(
@@ -217,7 +216,7 @@ mod test_rprog {
                     RNum(4),
                     RLet!("1", RNum(5), RAdd!(RVar!("0"), RVar!("1")))
                 ),
-                9,
+                S64(9),
             ),
             (
                 RLet(
@@ -229,12 +228,45 @@ mod test_rprog {
                         Box::new(RAdd(Box::new(RVar("0".into())), Box::new(RVar("1".into())))),
                     )),
                 ),
-                1,
+                S64(1),
             ),
             (
                 RLet!("0", RRead, RLet!("1", RRead, RAdd!(RVar!("0"), RVar!("1")))),
-                1,
+                S64(1),
             ),
+        ];
+
+        a_interp_all(tests);
+    }
+
+    #[test]
+    fn test_r2() {
+        let tests = vec![
+            (REQ!(RNum(4), RNum(4)), Bool(true)),
+            (REQ!(RNum(3), RNum(4)), Bool(false)),
+            (RLT!(RNum(3), RNum(4)), Bool(true)),
+            (RLT!(RNum(4), RNum(3)), Bool(false)),
+            (RLT!(RNum(4), RNum(4)), Bool(false)),
+            (RLEQ!(RNum(3), RNum(4)), Bool(true)),
+            (RLEQ!(RNum(4), RNum(3)), Bool(false)),
+            (RLEQ!(RNum(4), RNum(4)), Bool(true)),
+            (RGEQ!(RNum(3), RNum(4)), Bool(false)),
+            (RGEQ!(RNum(4), RNum(3)), Bool(true)),
+            (RGEQ!(RNum(4), RNum(4)), Bool(true)),
+            (RGT!(RNum(3), RNum(4)), Bool(false)),
+            (RGT!(RNum(4), RNum(3)), Bool(true)),
+            (RGT!(RNum(4), RNum(4)), Bool(false)),
+            (RTrue!(), Bool(true)),
+            (RNot!(RTrue!()), Bool(false)),
+            (RNot!(RFalse!()), Bool(true)),
+            (RAnd!(RFalse!(), RFalse!()), Bool(false)),
+            (RAnd!(RFalse!(), RTrue!()), Bool(false)),
+            (RAnd!(RTrue!(), RFalse!()), Bool(false)),
+            (RAnd!(RTrue!(), RTrue!()), Bool(true)),
+            (ROr!(RFalse!(), RFalse!()), Bool(false)),
+            (ROr!(RFalse!(), RTrue!()), Bool(true)),
+            (ROr!(RTrue!(), RFalse!()), Bool(true)),
+            (ROr!(RTrue!(), RTrue!()), Bool(true)),
         ];
 
         a_interp_all(tests);
@@ -258,11 +290,11 @@ mod test_rprog {
 
     #[test]
     fn test_two_n() {
-        a_interp(two_n(0), 1);
-        a_interp(two_n(1), 2);
-        a_interp(two_n(2), 4);
-        a_interp(two_n(3), 8);
-        a_interp(two_n(4), 16);
-        a_interp(two_n(5), 32);
+        a_interp(two_n(0), S64(1));
+        a_interp(two_n(1), S64(2));
+        a_interp(two_n(2), S64(4));
+        a_interp(two_n(3), S64(8));
+        a_interp(two_n(4), S64(16));
+        a_interp(two_n(5), S64(32));
     }
 }

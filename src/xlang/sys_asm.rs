@@ -1,4 +1,4 @@
-use crate::common::{traits::Emit, types::Number};
+use crate::common::{traits::Emit, types::Answer};
 use std::{
     fs::File,
     io::Write,
@@ -12,16 +12,16 @@ use tempfile::tempdir;
 use super::XProgram;
 
 pub trait CompileAndRun {
-    fn run(&self) -> Number;
+    fn run(&self) -> Answer;
 }
 
 impl CompileAndRun for XProgram {
-    fn run(&self) -> Number {
-        compile_and_run(&self.emit()).expect("Compile failed") as Number
+    fn run(&self) -> Answer {
+        compile_and_run(&self.emit()).expect("Compile failed")
     }
 }
 
-pub fn compile_and_run(prog: &String) -> Result<Number, String> {
+pub fn compile_and_run(prog: &String) -> Result<Answer, String> {
     // Create new file with arg string
     let dir = tempdir().expect("Failed to alocate temp dir");
     let temp_file = dir.path().join("asm.s");
@@ -68,7 +68,7 @@ pub fn compile_and_run(prog: &String) -> Result<Number, String> {
             let ret_str = String::from_utf8_lossy(&run_res.stdout).to_string();
             let ret_str_trimed = ret_str.trim();
             println!("Run Stdout: {:?}", ret_str_trimed);
-            let ret: Number = ret_str_trimed.parse().unwrap_or(code.into());
+            let ret: Answer = ret_str_trimed.parse().unwrap_or(Answer::S64(code as i64));
             println!("Run ret code: {:?}", ret);
             Ok(ret)
         }

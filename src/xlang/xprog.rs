@@ -1,6 +1,6 @@
 use crate::common::{
     traits::Emit,
-    types::{Address, Label, Number, Variable},
+    types::{Address, Answer, Answer::*, Label, Number, Variable},
 };
 use std::collections::HashMap;
 use strum_macros;
@@ -249,14 +249,14 @@ impl XInterpMut for XBlock {
 
 impl XInterpMut for XProgram {
     type Env = XEnv;
-    type Output = Number;
+    type Output = Answer;
 
     fn interp_(&self, mut env: &mut Self::Env) -> Self::Output {
         let ret_env = Label!("main").interp_(&mut env);
-        *ret_env
+        S64(*ret_env
             .printed
             .get(0)
-            .unwrap_or(&value(&XArgument::XReg(XRegister::RAX), &ret_env))
+            .unwrap_or(&value(&XArgument::XReg(XRegister::RAX), &ret_env)))
     }
 
     fn interp(&self) -> Self::Output {
@@ -342,8 +342,8 @@ mod test_xprog {
         assert_eq!(XArgument::XDeref(XRegister::RAX, 0).emit(), "(%RAX)");
     }
 
-    fn get_test_progs() -> Vec<(XProgram, i64)> {
-        let test_progs: Vec<(XProgram, i64)> = vec![
+    fn get_test_progs() -> Vec<(XProgram, Answer)> {
+        let test_progs: Vec<(XProgram, Answer)> = vec![
             (
                 vec![(
                     "main".to_string(),
@@ -351,7 +351,7 @@ mod test_xprog {
                 )]
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
-                5,
+                S64(5),
             ),
             (
                 vec![(
@@ -365,7 +365,7 @@ mod test_xprog {
                 )]
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
-                11,
+                S64(11),
             ),
             (
                 vec![
@@ -374,7 +374,7 @@ mod test_xprog {
                 ]
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
-                33,
+                S64(33),
             ),
             (
                 vec![(
@@ -389,7 +389,7 @@ mod test_xprog {
                 )]
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
-                6,
+                S64(6),
             ),
         ];
 
@@ -407,10 +407,10 @@ mod test_xprog {
             match c_res {
                 Ok(n) => {
                     assert_eq!(
-                        n as i64,
+                        n,
                         expected_res,
                         "Program returned {} when it should have returned {}, Program: {}{}",
-                        n as i64,
+                        n,
                         expected_res,
                         NEWLINE,
                         test_prog.emit()

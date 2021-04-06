@@ -1,6 +1,6 @@
 use crate::common::{
     traits::InterpMut,
-    types::{Label, Number, Variable},
+    types::{Answer, Label, Number, Variable},
 };
 use std::collections::HashMap;
 
@@ -36,7 +36,7 @@ pub enum CTail {
 pub struct CEnv {
     read_count: usize,
     block_map: CLabelMapping,
-    var_map: HashMap<Variable, Number>,
+    var_map: HashMap<Variable, Answer>,
 }
 
 impl CEnv {
@@ -51,7 +51,7 @@ impl CEnv {
 
 impl InterpMut for Label {
     type Env = CEnv;
-    type Output = Number;
+    type Output = Answer;
 
     fn interp(&self) -> Self::Output {
         unimplemented!()
@@ -70,7 +70,7 @@ impl InterpMut for Label {
 
 impl InterpMut for CProgram {
     type Env = CEnv;
-    type Output = Number;
+    type Output = Answer;
 
     fn interp(&self) -> Self::Output {
         let mut env = CEnv::new(self);
@@ -84,7 +84,7 @@ impl InterpMut for CProgram {
 
 impl InterpMut for CTail {
     type Env = CEnv;
-    type Output = Number;
+    type Output = Answer;
 
     fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
@@ -103,7 +103,11 @@ impl InterpMut for CTail {
 
 impl InterpMut for CStatement {
     type Env = CEnv;
-    type Output = Number;
+    type Output = Answer;
+
+    fn interp(&self) -> Self::Output {
+        unimplemented!()
+    }
 
     fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
@@ -114,19 +118,15 @@ impl InterpMut for CStatement {
             }
         }
     }
-
-    fn interp(&self) -> Self::Output {
-        unimplemented!()
-    }
 }
 
 impl InterpMut for CArgument {
     type Env = CEnv;
-    type Output = Number;
+    type Output = Answer;
 
     fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            CArgument::Num(n) => *n,
+            CArgument::Num(n) => Answer::S64(*n),
             CArgument::Var(v) => *env.var_map.get(v).expect("Undefined variable"),
         }
     }
@@ -138,7 +138,7 @@ impl InterpMut for CArgument {
 
 impl InterpMut for CExpression {
     type Env = CEnv;
-    type Output = Number;
+    type Output = Answer;
 
     fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
@@ -146,9 +146,9 @@ impl InterpMut for CExpression {
             CExpression::Read => {
                 let count = env.read_count;
                 env.read_count += 1;
-                count as Number
+                count.into()
             }
-            CExpression::Negate(ex) => -1 * ex.interp_(env),
+            CExpression::Negate(ex) => Answer::S64(-1) * ex.interp_(env),
             CExpression::Add(lh, rh) => lh.interp_(env) + rh.interp_(env),
         }
     }
@@ -162,12 +162,13 @@ impl InterpMut for CExpression {
 mod test_cprog {
     use super::*;
     use pretty_assertions::assert_eq;
+    use Answer::*;
     use CArgument::*;
     use CExpression::*;
     use CStatement::*;
     use CTail::*;
 
-    type TestPrograms = Vec<(CProgram, Number)>;
+    type TestPrograms = Vec<(CProgram, Answer)>;
 
     #[test]
     fn test_c0() {
@@ -182,7 +183,7 @@ mod test_cprog {
                 )]
                 .into_iter()
                 .collect::<CProgram>(),
-                5,
+                S64(5),
             ),
             (
                 vec![(
@@ -203,7 +204,7 @@ mod test_cprog {
                 )]
                 .into_iter()
                 .collect::<CProgram>(),
-                16,
+                S64(16),
             ),
             (
                 vec![(
@@ -224,7 +225,7 @@ mod test_cprog {
                 )]
                 .into_iter()
                 .collect::<CProgram>(),
-                -11,
+                S64(-11),
             ),
             (
                 vec![(
@@ -245,7 +246,7 @@ mod test_cprog {
                 )]
                 .into_iter()
                 .collect::<CProgram>(),
-                -1,
+                S64(-1),
             ),
         ];
 
@@ -273,7 +274,7 @@ mod test_cprog {
             )]
             .into_iter()
             .collect::<CProgram>(),
-            5,
+            S64(5),
         )];
 
         for (test_program, expected_res) in test_progs {

@@ -55,25 +55,28 @@ fn econ_t(tail: &RExpr) -> CTail {
 #[cfg(test)]
 mod test_econ {
     use super::*;
-    use crate::common::{traits::InterpMut, types::Number};
+    use crate::common::{
+        traits::InterpMut,
+        types::{Answer, Answer::*},
+    };
     use pretty_assertions::assert_eq;
 
     // Where RProgram is RCO'ed style
-    type Test = (RProgram, Number);
+    type Test = (RProgram, Answer);
     type Tests = Vec<Test>;
 
     #[test]
     fn test_econ() {
         let tests: Tests = vec![
-            (RExpr::RNum(5), 5),
-            (RLet!("r0", RExpr::RRead, RVar!("r0")), 0),
+            (RExpr::RNum(5), S64(5)),
+            (RLet!("r0", RExpr::RRead, RVar!("r0")), S64(0)),
             (
                 RLet!(
                     "r0",
                     RAdd!(RExpr::RNum(3), RExpr::RNum(6)),
                     RLet!("r1", RAdd!(RVar!("r0"), RExpr::RNum(2)), RVar!("r1"))
                 ),
-                11,
+                S64(11),
             ),
             (
                 RLet!(
@@ -93,7 +96,7 @@ mod test_econ {
                         )
                     )
                 ),
-                5,
+                S64(5),
             ),
         ];
 

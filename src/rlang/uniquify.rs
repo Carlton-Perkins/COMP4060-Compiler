@@ -50,10 +50,7 @@ impl Uniquify for RProgram {
                 Some(nv) => RVar(nv.into()),
                 None => panic!("Uniquify unbound variable"),
             },
-            RTrue => {
-                todo!("R1 -> R2")
-            }
-            RFalse => {
+            RBool(_b) => {
                 todo!("R1 -> R2")
             }
             RCmp(_, _, _) => {
@@ -73,12 +70,12 @@ impl Uniquify for RProgram {
 #[cfg(test)]
 mod test_uniquify {
     use super::*;
-    use crate::common::traits::InterpMut;
+    use crate::common::{traits::InterpMut, types::Answer, types::Answer::*};
     use crate::rlang::randp;
-    use crate::{common::types::Number, rlang::RExpr::*};
+    use crate::rlang::RExpr::*;
     use pretty_assertions::assert_eq;
 
-    type Test = (RProgram, RProgram, Number);
+    type Test = (RProgram, RProgram, Answer);
     type Tests = Vec<Test>;
 
     fn a_uni((start_program, expected_uni_program, expected_res): Test) {
@@ -112,11 +109,11 @@ mod test_uniquify {
     #[test]
     fn test_uni() {
         let tests = vec![
-            (RNum(5), RNum(5), 5),
+            (RNum(5), RNum(5), S64(5)),
             (
                 RLet("0".into(), Box::new(RNum(5)), Box::new(RVar("0".into()))),
                 RLet("u0".into(), Box::new(RNum(5)), Box::new(RVar("u0".into()))),
-                5,
+                S64(5),
             ),
             (
                 RLet(
@@ -140,7 +137,7 @@ mod test_uniquify {
                         )),
                     )),
                 ),
-                5,
+                S64(5),
             ),
             (
                 RLet(
@@ -164,7 +161,7 @@ mod test_uniquify {
                         )),
                     )),
                 ),
-                2,
+                S64(2),
             ),
         ];
 

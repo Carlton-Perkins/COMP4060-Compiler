@@ -72,10 +72,7 @@ impl Opt for RExpr {
                 Some(e) => e.clone(),
                 None => RVar(id.clone()),
             },
-            RTrue => {
-                todo!("R1 -> R2")
-            }
-            RFalse => {
+            RBool(_b) => {
                 todo!("R1 -> R2")
             }
             RCmp(_, _, _) => {
@@ -95,10 +92,13 @@ impl Opt for RExpr {
 #[cfg(test)]
 mod test_ropt {
     use super::*;
-    use crate::{common::traits::InterpMut, rlang::randp};
+    use crate::{
+        common::{traits::InterpMut, types::Answer, types::Answer::*},
+        rlang::randp,
+    };
     use pretty_assertions::assert_eq;
 
-    fn a_opt(e: RExpr, expected_opt: RExpr, expected_result: i64) {
+    fn a_opt(e: RExpr, expected_opt: RExpr, expected_result: Answer) {
         println!("{:?}", e);
         let e_res = e.interp().unwrap();
         let opt = e.opt();
@@ -117,7 +117,7 @@ mod test_ropt {
         assert_eq!(e_res, opt_res, "Optimization for {:?} -> {} does not evaluate the same as original expression {:?} -> {} ", opt, opt_res, e, e_res);
     }
 
-    fn a_opt_all(vec: Vec<(RExpr, RExpr, i64)>) {
+    fn a_opt_all(vec: Vec<(RExpr, RExpr, Answer)>) {
         for (e, expect_opt, expect_res) in vec {
             a_opt(e, expect_opt, expect_res)
         }
@@ -126,14 +126,14 @@ mod test_ropt {
     #[test]
     fn test_opt_r0() {
         let test_expr = vec![
-            (RNum(5), RNum(5), 5),
-            (RNegate(Box::new(RNum(5))), RNum(-5), -5),
-            (RNegate(Box::new(RRead)), RNegate(Box::new(RRead)), 0),
-            (RAdd(Box::new(RNum(3)), Box::new(RNum(2))), RNum(5), 5),
+            (RNum(5), RNum(5), S64(5)),
+            (RNegate(Box::new(RNum(5))), RNum(-5), S64(-5)),
+            (RNegate(Box::new(RRead)), RNegate(Box::new(RRead)), S64(0)),
+            (RAdd(Box::new(RNum(3)), Box::new(RNum(2))), RNum(5), S64(5)),
             (
                 RAdd(Box::new(RNum(3)), Box::new(RRead)),
                 RAdd(Box::new(RNum(3)), Box::new(RRead)),
-                3,
+                S64(3),
             ),
         ];
 
@@ -146,22 +146,22 @@ mod test_ropt {
             (
                 RLet("0".into(), Box::new(RNum(0)), Box::new(RNum(1))),
                 RNum(1),
-                1,
+                S64(1),
             ),
             (
                 RLet("0".into(), Box::new(RNum(5)), Box::new(RRead)),
                 RRead,
-                0,
+                S64(0),
             ),
             (
                 RLet("0".into(), Box::new(RNum(5)), Box::new(RVar("0".into()))),
                 RNum(5),
-                5,
+                S64(5),
             ),
             (
                 RLet("0".into(), Box::new(RRead), Box::new(RVar("0".into()))),
                 RLet("0".into(), Box::new(RRead), Box::new(RVar("0".into()))),
-                0,
+                S64(0),
             ),
             (
                 RLet(
@@ -174,7 +174,7 @@ mod test_ropt {
                     )),
                 ),
                 RNum(6),
-                6,
+                S64(6),
             ),
             (
                 RLet(
@@ -191,7 +191,7 @@ mod test_ropt {
                     )),
                 ),
                 RAdd(Box::new(RNum(5)), Box::new(RRead)),
-                5,
+                S64(5),
             ),
         ];
 

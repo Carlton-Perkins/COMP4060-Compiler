@@ -64,10 +64,7 @@ impl ResolveComplex for RProgram {
                 .get(v)
                 .expect(format!("RCO: Unbound var {:?}", v).as_str())
                 .clone(),
-            RTrue => {
-                todo!("R1 -> R2")
-            }
-            RFalse => {
+            RBool(_b) => {
                 todo!("R1 -> R2")
             }
             RCmp(_, _, _) => {
@@ -113,23 +110,26 @@ fn lift(expr: &RExpr, env: &mut RCEnv) -> RExpr {
 mod test_rco {
     use super::*;
     use crate::{
-        common::{traits::InterpMut, types::Number},
+        common::{
+            traits::InterpMut,
+            types::{Answer, Answer::*},
+        },
         rlang::Uniquify,
     };
     use pretty_assertions::assert_eq;
 
-    type Test = (RProgram, RProgram, Number);
+    type Test = (RProgram, RProgram, Answer);
     type Tests = Vec<Test>;
 
     #[test]
     fn test_rco() {
         let tests: Tests = vec![
-            (RNum(5), RNum(5), 5),
-            (RRead, RLet!("r0", RRead, RVar!("r0")), 0),
+            (RNum(5), RNum(5), S64(5)),
+            (RRead, RLet!("r0", RRead, RVar!("r0")), S64(0)),
             (
                 RNegate!(RNum(1)),
                 RLet!("r0", RNegate!(RNum(1)), RVar!("r0")),
-                -1,
+                S64(-1),
             ),
             (
                 RAdd!(RRead, RRead),
@@ -142,7 +142,7 @@ mod test_rco {
                         RLet!("r2", RAdd!(RVar!("r0"), RVar!("r1")), RVar!("r2"))
                     )
                 ),
-                1,
+                S64(1),
             ),
             (
                 RAdd(
@@ -158,7 +158,7 @@ mod test_rco {
                         Box::new(RVar("r1".into())),
                     )),
                 ),
-                11,
+                S64(11),
             ),
             (
                 RAdd!(RAdd!(RNum(3), RNum(6)), RNum(2)),
@@ -167,7 +167,7 @@ mod test_rco {
                     RAdd!(RNum(3), RNum(6)),
                     RLet!("r1", RAdd!(RVar!("r0"), RNum(2)), RVar!("r1"))
                 ),
-                11,
+                S64(11),
             ),
             (
                 RAdd!(RAdd!(RNum(3), RNum(6)), RNegate!(RAdd!(RRead, RNum(2)))),
@@ -188,7 +188,7 @@ mod test_rco {
                         )
                     )
                 ),
-                7,
+                S64(7),
             ),
             (
                 RAdd!(
@@ -212,7 +212,7 @@ mod test_rco {
                         )
                     )
                 ),
-                5,
+                S64(5),
             ),
         ];
 

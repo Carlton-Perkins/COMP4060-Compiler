@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 mod rprog;
-pub use rprog::{REnv, RExpr, RProgram};
+pub use rprog::{REnv, RExpr, RProgram, RType, RCMP};
 
 #[allow(dead_code)]
 mod rrandp;
