@@ -47,9 +47,9 @@ impl LocateVars for CTail {
 impl LocateVars for CArgument {
     fn locate_vars(&self) -> LocalsInfo {
         match self {
-            CArgument::Num(_) => LocalsInfo::new(),
-            CArgument::Var(var) => LocalsInfo::from_iter(vec![var.clone()]),
-            CArgument::Bool(_) => {
+            CArgument::CNum(_) => LocalsInfo::new(),
+            CArgument::CVar(var) => LocalsInfo::from_iter(vec![var.clone()]),
+            CArgument::CBool(_) => {
                 todo!("C0 -> C1")
             }
         }
@@ -107,8 +107,8 @@ mod test_uncover_locals {
                 vec![(
                     Label!("main"),
                     Seq(
-                        Set("0".into(), Arg(Num(5))),
-                        Box::new(Return(Var("0".into()))),
+                        Set("0".into(), Arg(CNum(5))),
+                        Box::new(Return(CVar("0".into()))),
                     ),
                 )]
                 .into_iter()
@@ -119,14 +119,14 @@ mod test_uncover_locals {
                 vec![(
                     Label!("main"),
                     Seq(
-                        Set("0".into(), Arg(Num(5))),
+                        Set("0".into(), Arg(CNum(5))),
                         Box::new(Seq(
-                            Set("1".into(), Arg(Num(6))),
+                            Set("1".into(), Arg(CNum(6))),
                             Box::new(Seq(
-                                Set("2".into(), Add(Var("0".into()), Var("1".into()))),
+                                Set("2".into(), Add(CVar("0".into()), CVar("1".into()))),
                                 Box::new(Seq(
-                                    Set("3".into(), Add(Var("0".into()), Var("2".into()))),
-                                    Box::new(Return(Var("3".into()))),
+                                    Set("3".into(), Add(CVar("0".into()), CVar("2".into()))),
+                                    Box::new(Return(CVar("3".into()))),
                                 )),
                             )),
                         )),
@@ -143,14 +143,14 @@ mod test_uncover_locals {
                 vec![(
                     Label!("main"),
                     Seq(
-                        Set("0".into(), Arg(Num(5))),
+                        Set("0".into(), Arg(CNum(5))),
                         Box::new(Seq(
-                            Set("1".into(), Arg(Num(6))),
+                            Set("1".into(), Arg(CNum(6))),
                             Box::new(Seq(
-                                Set("2".into(), Add(Var("0".into()), Var("1".into()))),
+                                Set("2".into(), Add(CVar("0".into()), CVar("1".into()))),
                                 Box::new(Seq(
-                                    Set("3".into(), Negate(Var("2".into()))),
-                                    Box::new(Return(Var("3".into()))),
+                                    Set("3".into(), Negate(CVar("2".into()))),
+                                    Box::new(Return(CVar("3".into()))),
                                 )),
                             )),
                         )),
@@ -171,10 +171,10 @@ mod test_uncover_locals {
                         Box::new(Seq(
                             Set("1".into(), Read),
                             Box::new(Seq(
-                                Set("2".into(), Add(Var("0".into()), Var("1".into()))),
+                                Set("2".into(), Add(CVar("0".into()), CVar("1".into()))),
                                 Box::new(Seq(
-                                    Set("3".into(), Negate(Var("2".into()))),
-                                    Box::new(Return(Var("3".into()))),
+                                    Set("3".into(), Negate(CVar("2".into()))),
+                                    Box::new(Return(CVar("3".into()))),
                                 )),
                             )),
                         )),

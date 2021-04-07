@@ -9,9 +9,9 @@ pub type CProgram = CLabelMapping;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CArgument {
-    Num(Number),
-    Var(Variable),
-    Bool(bool),
+    CNum(Number),
+    CVar(Variable),
+    CBool(bool),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -137,9 +137,9 @@ impl InterpMut for CArgument {
 
     fn interp_(&self, env: &mut Self::Env) -> Self::Output {
         match self {
-            CArgument::Num(n) => Answer::S64(*n),
-            CArgument::Var(v) => *env.var_map.get(v).expect("Undefined variable"),
-            CArgument::Bool(_) => {
+            CArgument::CNum(n) => Answer::S64(*n),
+            CArgument::CVar(v) => *env.var_map.get(v).expect("Undefined variable"),
+            CArgument::CBool(_) => {
                 todo!("C0 -> C1")
             }
         }
@@ -197,8 +197,8 @@ mod test_cprog {
                 vec![(
                     Label!("main"),
                     Seq(
-                        Set("0".into(), Arg(Num(5))),
-                        Box::new(Return(Var("0".into()))),
+                        Set("0".into(), Arg(CNum(5))),
+                        Box::new(Return(CVar("0".into()))),
                     ),
                 )]
                 .into_iter()
@@ -209,14 +209,14 @@ mod test_cprog {
                 vec![(
                     Label!("main"),
                     Seq(
-                        Set("0".into(), Arg(Num(5))),
+                        Set("0".into(), Arg(CNum(5))),
                         Box::new(Seq(
-                            Set("1".into(), Arg(Num(6))),
+                            Set("1".into(), Arg(CNum(6))),
                             Box::new(Seq(
-                                Set("2".into(), Add(Var("0".into()), Var("1".into()))),
+                                Set("2".into(), Add(CVar("0".into()), CVar("1".into()))),
                                 Box::new(Seq(
-                                    Set("3".into(), Add(Var("0".into()), Var("2".into()))),
-                                    Box::new(Return(Var("3".into()))),
+                                    Set("3".into(), Add(CVar("0".into()), CVar("2".into()))),
+                                    Box::new(Return(CVar("3".into()))),
                                 )),
                             )),
                         )),
@@ -230,14 +230,14 @@ mod test_cprog {
                 vec![(
                     Label!("main"),
                     Seq(
-                        Set("0".into(), Arg(Num(5))),
+                        Set("0".into(), Arg(CNum(5))),
                         Box::new(Seq(
-                            Set("1".into(), Arg(Num(6))),
+                            Set("1".into(), Arg(CNum(6))),
                             Box::new(Seq(
-                                Set("2".into(), Add(Var("0".into()), Var("1".into()))),
+                                Set("2".into(), Add(CVar("0".into()), CVar("1".into()))),
                                 Box::new(Seq(
-                                    Set("3".into(), Negate(Var("2".into()))),
-                                    Box::new(Return(Var("3".into()))),
+                                    Set("3".into(), Negate(CVar("2".into()))),
+                                    Box::new(Return(CVar("3".into()))),
                                 )),
                             )),
                         )),
@@ -255,10 +255,10 @@ mod test_cprog {
                         Box::new(Seq(
                             Set("1".into(), Read),
                             Box::new(Seq(
-                                Set("2".into(), Add(Var("0".into()), Var("1".into()))),
+                                Set("2".into(), Add(CVar("0".into()), CVar("1".into()))),
                                 Box::new(Seq(
-                                    Set("3".into(), Negate(Var("2".into()))),
-                                    Box::new(Return(Var("3".into()))),
+                                    Set("3".into(), Negate(CVar("2".into()))),
+                                    Box::new(Return(CVar("3".into()))),
                                 )),
                             )),
                         )),
@@ -282,14 +282,110 @@ mod test_cprog {
     }
 
     #[test]
+    fn test_c1() {
+        let test_progs: TestPrograms = vec![
+            (
+                CProgram!(CTail!(
+                    Label!("main"),
+                    CSeq!(CSet!("0", Arg(CBool(true))), Return(CVar!("0")))
+                )),
+                Bool(true),
+            ),
+            (
+                CProgram!(CTail!(
+                    Label!("main"),
+                    CSeq!(
+                        CSet!("0", Arg(CBool(true))),
+                        CSeq!(CSet!("1", Not(CVar!("0"))), Return(CVar!("1")))
+                    )
+                )),
+                Bool(false),
+            ),
+            (
+                CProgram!(CTail!(
+                    Label!("main"),
+                    CSeq!(
+                        CSet!("0", Arg(CNum(4))),
+                        CSeq!(
+                            CSet!("1", Arg(CNum(4))),
+                            CSeq!(
+                                CSet!("2", Cmp(CMP::EQ, CVar!("0"), CVar!("1"))),
+                                Return(CVar!("2"))
+                            )
+                        )
+                    )
+                )),
+                Bool(true),
+            ),
+            (
+                CProgram!(
+                    CTail!(Label!("main"), Goto("second".into())),
+                    CTail!(Label!("second"), Goto("third".into())),
+                    CTail!(Label!("third"), Goto("end".into())),
+                    CTail!(Label!("end"), Return(CNum(5))),
+                ),
+                S64(5),
+            ),
+            (
+                CProgram!(
+                    CTail!(Label!("main"), Goto("second".into())),
+                    CTail!(
+                        Label!("second"),
+                        GotoIf(CMP::EQ, CNum(5), CNum(5), "third".into(), "forth".into())
+                    ),
+                    CTail!(
+                        Label!("third"),
+                        CSeq!(CSet!("x", Arg(CNum(42))), Goto("end".into()))
+                    ),
+                    CTail!(
+                        Label!("forth"),
+                        CSeq!(CSet!("x", Arg(CNum(-24))), Goto("end".into()))
+                    ),
+                    CTail!(Label!("end"), Return(CVar!("x"))),
+                ),
+                S64(42),
+            ),
+            (
+                CProgram!(
+                    CTail!(Label!("main"), Goto("second".into())),
+                    CTail!(
+                        Label!("second"),
+                        GotoIf(CMP::LT, CNum(5), CNum(4), "third".into(), "forth".into())
+                    ),
+                    CTail!(
+                        Label!("third"),
+                        CSeq!(CSet!("x", Arg(CNum(42))), Goto("end".into()))
+                    ),
+                    CTail!(
+                        Label!("forth"),
+                        CSeq!(CSet!("x", Arg(CNum(-24))), Goto("end".into()))
+                    ),
+                    CTail!(Label!("end"), Return(CVar!("x"))),
+                ),
+                S64(-24),
+            ),
+        ];
+
+        for (test_program, expected_res) in test_progs {
+            let res = test_program.interp();
+
+            assert_eq!(
+                res, expected_res,
+                "\nExpression {:?},  returned an invalid result, {} != {}",
+                test_program, res, expected_res
+            )
+        }
+    }
+
+    #[test]
     #[should_panic(expected = "Undefined variable")]
     fn test_c0_undefined_variable() {
         let test_progs: TestPrograms = vec![(
             vec![(
                 Label!("main"),
                 Seq(
-                    Set("0".into(), Arg(Num(5))),
-                    Box::new(Return(Var("1".into()))),
+                    Set("0".into(), Arg(CNum(5))),
+                    Box::new(Return(CVar("1".into()))),
                 ),
             )]
             .into_iter()

@@ -17,7 +17,7 @@ macro_rules! CTail {
 #[macro_export]
 macro_rules! CVar {
     ($v:expr) => {
-        crate::clang::CArgument::Var($v.into())
+        crate::clang::CArgument::CVar($v.into())
     };
 }
 
@@ -50,15 +50,15 @@ mod test_cmacros {
             vec![(
                 Label!("main"),
                 Seq(
-                    Set("0".into(), Arg(Num(5))),
-                    Box::new(Return(Var("0".into()))),
+                    Set("0".into(), Arg(CNum(5))),
+                    Box::new(Return(CVar("0".into()))),
                 ),
             )]
             .into_iter()
             .collect::<CProgram>(),
             CProgram!(CTail!(
                 "main",
-                CSeq!(CSet!("0", Arg(Num(5))), Return(CVar!("0")))
+                CSeq!(CSet!("0", Arg(CNum(5))), Return(CVar!("0")))
             )),
         )];
 

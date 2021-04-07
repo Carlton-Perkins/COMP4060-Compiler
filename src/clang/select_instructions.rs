@@ -33,9 +33,9 @@ fn select_tail(tail: &CTail) -> XBlock {
 
 fn select_arg(arg: &CArgument) -> XArgument {
     match arg {
-        CArgument::Num(n) => XArgument::XCon(*n),
-        CArgument::Var(v) => XArgument::XVar(v.into()),
-        CArgument::Bool(_) => {
+        CArgument::CNum(n) => XArgument::XCon(*n),
+        CArgument::CVar(v) => XArgument::XVar(v.into()),
+        CArgument::CBool(_) => {
             todo!("C0 -> C1")
         }
     }
@@ -75,7 +75,7 @@ fn select_expr(dst: &XArgument, src: &CExpression) -> XBlock {
 mod test_select_instruction {
     use super::*;
     use crate::{
-        clang::{CArgument::Num, CExpression::*, CTail::*},
+        clang::{CArgument::CNum, CExpression::*, CTail::*},
         common::traits::InterpMut,
         xlang::{XArgument::*, XInstruction::*, XInterpMut},
     };
@@ -87,7 +87,7 @@ mod test_select_instruction {
             (
                 CProgram!(CTail!(
                     "main",
-                    CSeq!(CSet!("0", Arg(Num(5))), Return(CVar!("0")))
+                    CSeq!(CSet!("0", Arg(CNum(5))), Return(CVar!("0")))
                 )),
                 XProgram!(XBlock!(
                     "main",
@@ -99,9 +99,9 @@ mod test_select_instruction {
                 CProgram!(CTail!(
                     "main",
                     CSeq!(
-                        CSet!("0", Arg(Num(3))),
+                        CSet!("0", Arg(CNum(3))),
                         CSeq!(
-                            CSet!("1", Arg(Num(2))),
+                            CSet!("1", Arg(CNum(2))),
                             CSeq!(
                                 CSet!("2", CExpression::Add(CVar!("0"), CVar!("1"))),
                                 Return(CVar!("2"))
@@ -122,7 +122,7 @@ mod test_select_instruction {
                 CProgram!(CTail!(
                     "main",
                     CSeq!(
-                        CSet!("0", Arg(Num(5))),
+                        CSet!("0", Arg(CNum(5))),
                         CSeq!(CSet!("1", Negate(CVar!("0"))), Return(CVar!("1")))
                     )
                 )),

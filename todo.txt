@@ -76,7 +76,7 @@ x 2021-04-06 Extend your optimizer from R1 to R2.
 x 2021-04-06 Extend the uniquify pass from R1 to R2 programs, with a few test cases to check its output.
 x 2021-04-06 Extend your data types from C0 to C1.
 x 2021-04-06 Extend your pretty-printer from C0 to C1 programs.
-Write a half-dozen C1 test programs.
+x 2021-04-06 Write a half-dozen C1 test programs.
 Extend your interpreter from C0 to C1 programs.
 Extend your data types from X0 to X1.
 Extend your emitter from X0 to X1 programs.

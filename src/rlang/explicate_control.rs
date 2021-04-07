@@ -37,8 +37,8 @@ fn econ_e(expr: &RExpr) -> CExpression {
 
 fn econ_a(arg: &RExpr) -> CArgument {
     match arg {
-        RExpr::RNum(n) => CArgument::Num(*n),
-        RExpr::RVar(v) => CArgument::Var(v.clone()),
+        RExpr::RNum(n) => CArgument::CNum(*n),
+        RExpr::RVar(v) => CArgument::CVar(v.clone()),
         _ => panic!("Econ: Invalid structure {:?}", arg),
     }
 }
