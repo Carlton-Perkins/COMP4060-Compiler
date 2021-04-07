@@ -72,7 +72,7 @@ x 2021-04-06 Write type-checker tests for R2.
 x 2021-04-06 Write a type-checker for R2.
 x 2021-04-06 Extend your random generation function from R1 to R2.
 x 2021-04-06 Write some R2-specific optimizer tests.
-Extend your optimizer from R1 to R2.
+x 2021-04-06 Extend your optimizer from R1 to R2.
 Extend the uniquify pass from R1 to R2 programs, with a few test cases to check its output.
 Extend your data types from C0 to C1.
 Extend your pretty-printer from C0 to C1 programs.

@@ -60,19 +60,10 @@ impl IsPure for RExpr {
             RAdd(lh, rh) => lh.is_pure() && rh.is_pure(),
             RLet(_, ve, be) => ve.is_pure() && be.is_pure(),
             RVar(_) => true,
-
-            RCmp(_, _, _) => {
-                todo!("R1 -> R2")
-            }
-            RIf(_, _, _) => {
-                todo!("R1 -> R2")
-            }
-            RBool(_) => {
-                todo!("R1 -> R2")
-            }
-            RNot(_) => {
-                todo!("R1 -> R2")
-            }
+            RCmp(_, lh, rh) => lh.is_pure() && rh.is_pure(),
+            RIf(e, t, f) => e.is_pure() && t.is_pure() && f.is_pure(),
+            RBool(_) => true,
+            RNot(e) => e.is_pure(),
         }
     }
 }

@@ -1,8 +1,7 @@
 pub use crate::common::traits::Opt;
 use crate::{
     common::{traits::IsPure, types::Variable},
-    rlang::RExpr,
-    rlang::RExpr::*,
+    rlang::{RExpr, RExpr::*, RCMP::*},
 };
 use std::collections::HashMap;
 
@@ -22,6 +21,10 @@ impl OptEnv {
 
 impl Opt for RExpr {
     type Env = OptEnv;
+
+    fn opt(&self) -> Self {
+        self.opt_(&OptEnv::new())
+    }
 
     fn opt_(&self, env: &Self::Env) -> Self {
         match self {
@@ -72,23 +75,40 @@ impl Opt for RExpr {
                 Some(e) => e.clone(),
                 None => RVar(id.clone()),
             },
-            RBool(_b) => {
-                todo!("R1 -> R2")
+            RBool(_) => self.clone(),
+            RCmp(cmp, lh, rh) => {
+                let o = (lh.opt_(env), rh.opt_(env));
+                match o {
+                    (RNum(a), RNum(b)) => RBool(match cmp {
+                        EQ => a == b,
+                        LT => a < b,
+                        LEQ => a <= b,
+                        GEQ => a >= b,
+                        GT => a > b,
+                    }),
+                    _ => RCmp(*cmp, Box::new(o.0), Box::new(o.1)),
+                }
             }
-            RCmp(_, _, _) => {
-                todo!("R1 -> R2")
+            RIf(c, t, f) => {
+                let o = (c.opt_(env), t.opt_(env), f.opt_(env));
+                match o {
+                    (RBool(cond), a, b) => match cond {
+                        true => a,
+                        false => b,
+                    },
+                    (RNot(ncond), a, b) => RIf(Box::new(*ncond), Box::new(b), Box::new(a)),
+                    _ => RIf(Box::new(o.0), Box::new(o.1), Box::new(o.2)),
+                }
             }
-            RIf(_, _, _) => {
-                todo!("R1 -> R2")
-            }
-            RNot(_) => {
-                todo!("R1 -> R2")
+            RNot(ex) => {
+                let o_ex = ex.opt_(env);
+                match o_ex {
+                    RBool(b) => RBool(!b),
+                    RNot(b) => *b,
+                    _ => RNot(Box::new(o_ex)),
+                }
             }
         }
-    }
-
-    fn opt(&self) -> Self {
-        self.opt_(&OptEnv::new())
     }
 }
 
@@ -211,14 +231,24 @@ mod test_ropt {
             (RLEQ!(RNum(5), RRead), RLEQ!(RNum(5), RRead), Bool(false)),
             (RIf!(RBool(true), RNum(5), RNum(-8)), RNum(5), S64(5)),
             (
-                RNot!(RIf!(RBool(true), RNum(5), RNum(-8))),
-                RNum(-8),
-                S64(-8),
+                RNot!(RIf!(RBool(true), RBool(true), RBool(false))),
+                RBool(false),
+                Bool(false),
             ),
             (
-                RNot!(RIf!(RBool(true), RNum(5), RRead)),
-                RIf!(RBool(false), RNum(5), RRead),
-                S64(-8),
+                RNot!(RIf!(RBool(false), RBool(true), REQ!(RRead, RRead))),
+                RNot!(REQ!(RRead, RRead)),
+                Bool(true),
+            ),
+            (
+                RIf!(RNot!(RBool(true)), RBool(true), REQ!(RRead, RRead)),
+                REQ!(RRead, RRead),
+                Bool(false),
+            ),
+            (
+                RIf!(RNot!(REQ!(RRead, RRead)), RNum(4), RNum(77)),
+                RIf!(REQ!(RRead, RRead), RNum(77), RNum(4)),
+                S64(4),
             ),
             (
                 RIf!(REQ!(RNum(5), RNum(5)), RNum(5), RNum(-8)),
