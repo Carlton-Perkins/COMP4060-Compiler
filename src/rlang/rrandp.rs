@@ -125,7 +125,7 @@ mod test_rrandp {
     use crate::{
         clang::{SelectInstruction, UncoverLocals},
         common::traits::InterpMut,
-        rlang::{ExplicateControl, ResolveComplex, Uniquify},
+        rlang::{ExplicateControl, Opt, ResolveComplex, TypeCheck, Uniquify},
         xlang::{AssignRegisters, CompileAndRun, GraphAllocator, PatchInstructions, XInterpMut},
     };
     use itertools::Itertools;
@@ -151,9 +151,16 @@ mod test_rrandp {
         // println!("Program: {:?}", e);
         let e_ret = e.interp().unwrap();
 
-        let u = e.uniquify();
+        let o = e.opt();
+        let o_ret = o.interp().unwrap();
+        assert_eq!(e_ret, o_ret, "Randp Failure at  opt ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, o, o_ret);
+
+        let u = o.uniquify();
         let u_ret = u.interp().unwrap();
         assert_eq!(e_ret, u_ret, "Randp Failure at  uniquify ->\nProgram: {:?}\nExpected return: {}\nGenerated Program: {:?}\n Generated return: {}\n", e, e_ret, u, u_ret);
+
+        let t = u.typec();
+        let _t_ret = t.expect("Type check failed");
 
         let rco = u.resolve_complex();
         let rco_ret = rco.interp().unwrap();
