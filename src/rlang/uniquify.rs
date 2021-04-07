@@ -50,18 +50,14 @@ impl Uniquify for RProgram {
                 Some(nv) => RVar(nv.into()),
                 None => panic!("Uniquify unbound variable"),
             },
-            RBool(_b) => {
-                todo!("R1 -> R2")
-            }
-            RCmp(_, _, _) => {
-                todo!("R1 -> R2")
-            }
-            RIf(_, _, _) => {
-                todo!("R1 -> R2")
-            }
-            RNot(_) => {
-                todo!("R1 -> R2")
-            }
+            RBool(_b) => self.clone(),
+            RCmp(c, lh, rh) => RCmp(*c, Box::new(lh.uniquify_(env)), Box::new(rh.uniquify_(env))),
+            RIf(c, t, f) => RIf(
+                Box::new(c.uniquify_(env)),
+                Box::new(t.uniquify_(env)),
+                Box::new(f.uniquify_(env)),
+            ),
+            RNot(b) => RNot(Box::new(b.uniquify_(env))),
         }
     }
 
