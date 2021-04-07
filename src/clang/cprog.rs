@@ -1,6 +1,6 @@
 use crate::common::{
     traits::InterpMut,
-    types::{Answer, Label, Number, Variable},
+    types::{Answer, Label, Number, Variable, CMP},
 };
 use std::collections::HashMap;
 
@@ -11,6 +11,7 @@ pub type CProgram = CLabelMapping;
 pub enum CArgument {
     Num(Number),
     Var(Variable),
+    Bool(bool),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -19,6 +20,8 @@ pub enum CExpression {
     Read,
     Negate(CArgument),
     Add(CArgument, CArgument),
+    Not(CArgument),
+    Cmp(CMP, CArgument, CArgument),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,6 +33,8 @@ pub enum CStatement {
 pub enum CTail {
     Return(CArgument),
     Seq(CStatement, Box<CTail>),
+    Goto(Label),
+    GotoIf(CMP, CArgument, CArgument, Label, Label),
 }
 
 #[derive(Clone)]
@@ -93,6 +98,12 @@ impl InterpMut for CTail {
                 ex.interp_(env);
                 rest.interp_(env)
             }
+            CTail::Goto(_) => {
+                todo!("C0 -> C1")
+            }
+            CTail::GotoIf(_, _, _, _, _) => {
+                todo!("C0 -> C1")
+            }
         }
     }
 
@@ -128,6 +139,9 @@ impl InterpMut for CArgument {
         match self {
             CArgument::Num(n) => Answer::S64(*n),
             CArgument::Var(v) => *env.var_map.get(v).expect("Undefined variable"),
+            CArgument::Bool(_) => {
+                todo!("C0 -> C1")
+            }
         }
     }
 
@@ -150,6 +164,12 @@ impl InterpMut for CExpression {
             }
             CExpression::Negate(ex) => Answer::S64(-1) * ex.interp_(env),
             CExpression::Add(lh, rh) => lh.interp_(env) + rh.interp_(env),
+            CExpression::Not(_) => {
+                todo!("C0 -> C1")
+            }
+            CExpression::Cmp(_, _, _) => {
+                todo!("C0 -> C1")
+            }
         }
     }
 

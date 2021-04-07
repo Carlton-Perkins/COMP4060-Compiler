@@ -18,6 +18,15 @@ pub enum Answer {
     Bool(bool),
 }
 
+#[derive(Debug, PartialEq, Clone, Copy, Eq)]
+pub enum CMP {
+    EQ,
+    LT,
+    LEQ,
+    GEQ,
+    GT,
+}
+
 impl Add for Answer {
     type Output = Self;
 

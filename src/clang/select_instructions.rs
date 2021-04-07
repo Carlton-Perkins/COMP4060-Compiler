@@ -22,6 +22,12 @@ fn select_tail(tail: &CTail) -> XBlock {
     match tail {
         CTail::Return(arg) => vec![XInstruction::Movq(select_arg(arg), XArgument::XReg(RAX))],
         CTail::Seq(stat, more) => [select_stmt(stat), select_tail(more)].concat(),
+        CTail::Goto(_) => {
+            todo!("C0 -> C1")
+        }
+        CTail::GotoIf(_, _, _, _, _) => {
+            todo!("C0 -> C1")
+        }
     }
 }
 
@@ -29,6 +35,9 @@ fn select_arg(arg: &CArgument) -> XArgument {
     match arg {
         CArgument::Num(n) => XArgument::XCon(*n),
         CArgument::Var(v) => XArgument::XVar(v.into()),
+        CArgument::Bool(_) => {
+            todo!("C0 -> C1")
+        }
     }
 }
 
@@ -53,6 +62,12 @@ fn select_expr(dst: &XArgument, src: &CExpression) -> XBlock {
             XInstruction::Movq(select_arg(rh), dst.clone()),
             XInstruction::Addq(select_arg(lh), dst.clone()),
         ],
+        CExpression::Not(_) => {
+            todo!("C0 -> C1")
+        }
+        CExpression::Cmp(_, _, _) => {
+            todo!("C0 -> C1")
+        }
     }
 }
 

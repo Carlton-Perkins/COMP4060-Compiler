@@ -1,7 +1,7 @@
 pub use crate::common::traits::Opt;
 use crate::{
     common::{traits::IsPure, types::Variable},
-    rlang::{RExpr, RExpr::*, RCMP::*},
+    rlang::{RExpr, RExpr::*, CMP::*},
 };
 use std::collections::HashMap;
 

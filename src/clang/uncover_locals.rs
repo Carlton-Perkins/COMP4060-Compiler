@@ -34,6 +34,12 @@ impl LocateVars for CTail {
                 .union(&tail.locate_vars())
                 .map(|x| x.clone())
                 .collect(),
+            CTail::Goto(_) => {
+                todo!("C0 -> C1")
+            }
+            CTail::GotoIf(_, _, _, _, _) => {
+                todo!("C0 -> C1")
+            }
         }
     }
 }
@@ -43,6 +49,9 @@ impl LocateVars for CArgument {
         match self {
             CArgument::Num(_) => LocalsInfo::new(),
             CArgument::Var(var) => LocalsInfo::from_iter(vec![var.clone()]),
+            CArgument::Bool(_) => {
+                todo!("C0 -> C1")
+            }
         }
     }
 }
@@ -69,6 +78,12 @@ impl LocateVars for CExpression {
                 .union(&rh.locate_vars())
                 .map(|x| x.clone())
                 .collect(),
+            CExpression::Not(_) => {
+                todo!("C0 -> C1")
+            }
+            CExpression::Cmp(_, _, _) => {
+                todo!("C0 -> C1")
+            }
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::common::types::Variable;
 pub use crate::common::{
     traits::{InterpMut, IsPure},
-    types::Answer,
+    types::{Answer, CMP},
 };
 use std::collections::HashMap;
 
@@ -23,18 +23,9 @@ pub enum RExpr {
     RLet(Variable, Box<RExpr>, Box<RExpr>),
     RVar(Variable),
     RBool(bool),
-    RCmp(RCMP, Box<RExpr>, Box<RExpr>),
+    RCmp(CMP, Box<RExpr>, Box<RExpr>),
     RIf(Box<RExpr>, Box<RExpr>, Box<RExpr>),
     RNot(Box<RExpr>),
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Eq)]
-pub enum RCMP {
-    EQ,
-    LT,
-    LEQ,
-    GEQ,
-    GT,
 }
 
 pub struct REnv {
@@ -96,11 +87,11 @@ impl InterpMut for RExpr {
                 None => Err(format!("RInterp: Unbound variable {:?}", n)),
             },
             RCmp(cmp, l, r) => Ok(Answer::Bool(match cmp {
-                RCMP::EQ => l.interp_(env)? == r.interp_(env)?,
-                RCMP::LT => l.interp_(env)? < r.interp_(env)?,
-                RCMP::LEQ => l.interp_(env)? <= r.interp_(env)?,
-                RCMP::GEQ => l.interp_(env)? >= r.interp_(env)?,
-                RCMP::GT => l.interp_(env)? > r.interp_(env)?,
+                CMP::EQ => l.interp_(env)? == r.interp_(env)?,
+                CMP::LT => l.interp_(env)? < r.interp_(env)?,
+                CMP::LEQ => l.interp_(env)? <= r.interp_(env)?,
+                CMP::GEQ => l.interp_(env)? >= r.interp_(env)?,
+                CMP::GT => l.interp_(env)? > r.interp_(env)?,
             })),
             RIf(c, t, f) => {
                 if let Answer::Bool(cond) = c.interp_(env)? {

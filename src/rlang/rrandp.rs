@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use crate::{
     common::types::Variable,
-    rlang::{RExpr, RExpr::*, Type, RCMP},
+    rlang::{RExpr, RExpr::*, Type, CMP},
 };
 use rand::prelude::*;
 
 const RAND_TYPES: &[Type] = &[Type::S64, Type::Bool];
-const RAND_CMP: &[RCMP] = &[RCMP::EQ, RCMP::LT, RCMP::LEQ, RCMP::GEQ, RCMP::GT];
+const RAND_CMP: &[CMP] = &[CMP::EQ, CMP::LT, CMP::LEQ, CMP::GEQ, CMP::GT];
 #[derive(Clone)]
 pub struct RandEnv {
     var_c: usize,
@@ -115,7 +115,7 @@ fn rand_type() -> Type {
     *RAND_TYPES.choose(&mut thread_rng()).unwrap()
 }
 
-fn rand_cmp() -> RCMP {
+fn rand_cmp() -> CMP {
     *RAND_CMP.choose(&mut thread_rng()).unwrap()
 }
 

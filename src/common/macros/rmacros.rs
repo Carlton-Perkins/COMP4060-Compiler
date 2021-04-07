@@ -29,47 +29,47 @@ macro_rules! RVar {
 #[macro_export]
 macro_rules! REQ {
     ($lh:expr, $rh:expr) => {
-        crate::rlang::RExpr::RCmp(crate::rlang::RCMP::EQ, Box::new($lh), Box::new($rh))
+        crate::rlang::RExpr::RCmp(crate::common::types::CMP::EQ, Box::new($lh), Box::new($rh))
     };
 }
 
 #[macro_export]
 macro_rules! RLT {
     ($lh:expr, $rh:expr) => {
-        crate::rlang::RExpr::RCmp(crate::rlang::RCMP::LT, Box::new($lh), Box::new($rh))
+        crate::rlang::RExpr::RCmp(crate::common::types::CMP::LT, Box::new($lh), Box::new($rh))
     };
 }
 
 #[macro_export]
 macro_rules! RLEQ {
     ($lh:expr, $rh:expr) => {
-        crate::rlang::RExpr::RCmp(crate::rlang::RCMP::LEQ, Box::new($lh), Box::new($rh))
+        crate::rlang::RExpr::RCmp(crate::common::types::CMP::LEQ, Box::new($lh), Box::new($rh))
     };
 }
 
 #[macro_export]
 macro_rules! RGEQ {
     ($lh:expr, $rh:expr) => {
-        crate::rlang::RExpr::RCmp(crate::rlang::RCMP::GEQ, Box::new($lh), Box::new($rh))
+        crate::rlang::RExpr::RCmp(crate::common::types::CMP::GEQ, Box::new($lh), Box::new($rh))
     };
 }
 
 #[macro_export]
 macro_rules! RGT {
     ($lh:expr, $rh:expr) => {
-        crate::rlang::RExpr::RCmp(crate::rlang::RCMP::GT, Box::new($lh), Box::new($rh))
+        crate::rlang::RExpr::RCmp(crate::common::types::CMP::GT, Box::new($lh), Box::new($rh))
     };
 }
 #[macro_export]
 macro_rules! RAnd {
     ($lh:expr, $rh:expr) => {
-        crate::rlang::RExpr::RCmp(crate::rlang::RCMP::AND, Box::new($lh), Box::new($rh))
+        crate::rlang::RExpr::RCmp(crate::common::types::CMP::AND, Box::new($lh), Box::new($rh))
     };
 }
 #[macro_export]
 macro_rules! ROr {
     ($lh:expr, $rh:expr) => {
-        crate::rlang::RExpr::RCmp(crate::rlang::RCMP::OR, Box::new($lh), Box::new($rh))
+        crate::rlang::RExpr::RCmp(crate::common::types::CMP::OR, Box::new($lh), Box::new($rh))
     };
 }
 
@@ -102,7 +102,7 @@ macro_rules! RNot {
 
 #[cfg(test)]
 mod test_rmacros {
-    use crate::rlang::{RExpr::*, RCMP::*};
+    use crate::{common::types::CMP::*, rlang::RExpr::*};
     use pretty_assertions::assert_eq;
 
     #[test]
