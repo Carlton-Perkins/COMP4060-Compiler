@@ -98,17 +98,17 @@ impl InterpMut for CTail {
                 ex.interp_(env);
                 rest.interp_(env)
             }
-            CTail::Goto(_) => {
-                todo!("C0 -> C1")
-            }
-            CTail::GotoIf(_, _, _, _, _) => {
-                todo!("C0 -> C1")
+            CTail::Goto(l) => l.interp_(env),
+            CTail::GotoIf(cmp, lh, rh, tl, fl) => {
+                let c = CExpression::Cmp(*cmp, lh.clone(), rh.clone()).interp_(env);
+                let lab = if c == Answer::Bool(true) { tl } else { fl };
+                CTail::Goto(lab.to_string()).interp_(env)
             }
         }
     }
 
     fn interp(&self) -> Self::Output {
-        todo!()
+        unimplemented!()
     }
 }
 
@@ -139,9 +139,7 @@ impl InterpMut for CArgument {
         match self {
             CArgument::CNum(n) => Answer::S64(*n),
             CArgument::CVar(v) => *env.var_map.get(v).expect("Undefined variable"),
-            CArgument::CBool(_) => {
-                todo!("C0 -> C1")
-            }
+            CArgument::CBool(b) => Answer::Bool(*b),
         }
     }
 
@@ -164,11 +162,17 @@ impl InterpMut for CExpression {
             }
             CExpression::Negate(ex) => Answer::S64(-1) * ex.interp_(env),
             CExpression::Add(lh, rh) => lh.interp_(env) + rh.interp_(env),
-            CExpression::Not(_) => {
-                todo!("C0 -> C1")
-            }
-            CExpression::Cmp(_, _, _) => {
-                todo!("C0 -> C1")
+            CExpression::Not(ex) => !ex.interp_(env),
+            CExpression::Cmp(c, lh, rh) => {
+                let l = lh.interp_(env);
+                let r = rh.interp_(env);
+                Answer::Bool(match c {
+                    CMP::EQ => l == r,
+                    CMP::LT => l < r,
+                    CMP::LEQ => l <= r,
+                    CMP::GEQ => l >= r,
+                    CMP::GT => l > r,
+                })
             }
         }
     }
