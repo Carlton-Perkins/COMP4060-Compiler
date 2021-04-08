@@ -118,6 +118,21 @@ fn observe(inst: &XInstruction) -> (LiveSet, LiveSet) {
         XInstruction::Jmp(_) => (set![], set![]),
         XInstruction::Pushq(target) => (set![target], set![]),
         XInstruction::Popq(target) => (set![], set![target]),
+        XInstruction::Xorq(_, _) => {
+            todo!("X0 -> X1")
+        }
+        XInstruction::Cmpq(_, _) => {
+            todo!("X0 -> X1")
+        }
+        XInstruction::Set(_, _) => {
+            todo!("X0 -> X1")
+        }
+        XInstruction::Movzbq(_, _) => {
+            todo!("X0 -> X1")
+        }
+        XInstruction::JmpIf(_, _) => {
+            todo!("X0 -> X1")
+        }
     };
     (
         arg_set_to_live_set(&readset),
@@ -131,6 +146,9 @@ fn arg_to_live(arg: &XArgument) -> Option<LiveType> {
         XArgument::XReg(r) => Some(LiveType::Register(r.clone())),
         XArgument::XDeref(r, _) => Some(LiveType::Register(r.clone())),
         XArgument::XVar(v) => Some(LiveType::Var(v.clone())),
+        XArgument::XBReg(_) => {
+            todo!("X0 -> X1")
+        }
     }
 }
 
@@ -183,6 +201,21 @@ fn build_graph(
         XInstruction::Jmp(_) => {}
         XInstruction::Pushq(_) => {}
         XInstruction::Popq(dst) => add_graph(g, liveafter, dst),
+        XInstruction::Xorq(_, _) => {
+            todo!("X0 -> X1")
+        }
+        XInstruction::Cmpq(_, _) => {
+            todo!("X0 -> X1")
+        }
+        XInstruction::Set(_, _) => {
+            todo!("X0 -> X1")
+        }
+        XInstruction::Movzbq(_, _) => {
+            todo!("X0 -> X1")
+        }
+        XInstruction::JmpIf(_, _) => {
+            todo!("X0 -> X1")
+        }
     }
 }
 

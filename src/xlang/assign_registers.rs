@@ -95,6 +95,21 @@ impl Asn for XInstruction {
             Jmp(l) => Some(Jmp(l.clone())),
             Pushq(v) => Some(Pushq(v.asn(renames))),
             Popq(v) => Some(Popq(v.asn(renames))),
+            Xorq(_, _) => {
+                todo!("X0 -> X1")
+            }
+            Cmpq(_, _) => {
+                todo!("X0 -> X1")
+            }
+            Set(_, _) => {
+                todo!("X0 -> X1")
+            }
+            Movzbq(_, _) => {
+                todo!("X0 -> X1")
+            }
+            JmpIf(_, _) => {
+                todo!("X0 -> X1")
+            }
         }
     }
 }
@@ -116,6 +131,9 @@ impl Asn for XArgument {
                     .as_str(),
                 )
                 .clone(),
+            XBReg(_) => {
+                todo!("X0 -> X1")
+            }
         }
     }
 }

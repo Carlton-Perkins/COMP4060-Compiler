@@ -1,6 +1,6 @@
 use crate::common::{
     traits::Emit,
-    types::{Address, Answer, Answer::*, Label, Number, Variable},
+    types::{Address, Answer, Answer::*, Label, Number, Variable, CMP},
 };
 use std::collections::HashMap;
 use strum_macros;
@@ -72,6 +72,7 @@ pub use reglist::{
 pub enum XArgument {
     XCon(Number),
     XReg(XRegister),
+    XBReg(XRegister),
     XDeref(XRegister, Number),
     XVar(Variable),
 }
@@ -87,6 +88,11 @@ pub enum XInstruction {
     Jmp(Label),
     Pushq(XArgument),
     Popq(XArgument),
+    Xorq(XArgument, XArgument),
+    Cmpq(XArgument, XArgument),
+    Set(CMP, XArgument),
+    Movzbq(XArgument, XArgument),
+    JmpIf(CMP, XArgument),
 }
 
 impl XEnv {
@@ -99,6 +105,19 @@ impl XEnv {
             readc: 0,
             printed: Vec::new(),
         }
+    }
+}
+
+impl Emit for CMP {
+    fn emit(&self) -> String {
+        match self {
+            CMP::EQ => "e",
+            CMP::LT => "l",
+            CMP::LEQ => "le",
+            CMP::GEQ => "g",
+            CMP::GT => "ge",
+        }
+        .into()
     }
 }
 
@@ -123,8 +142,10 @@ impl Emit for XArgument {
                 0 => format!("({})", r.emit()),
                 n => format!("{}({})", n, r.emit()),
             },
-
             XArgument::XVar(v) => format!("!{}!", v),
+            XArgument::XBReg(_) => {
+                todo!("X0 -> X1")
+            }
         }
     }
 }
@@ -148,6 +169,21 @@ impl Emit for XInstruction {
             XInstruction::Jmp(dst) => unary("jmp", dst),
             XInstruction::Pushq(src) => unary("pushq", src),
             XInstruction::Popq(dst) => unary("popq", dst),
+            XInstruction::Xorq(_, _) => {
+                todo!("X0 -> X1")
+            }
+            XInstruction::Cmpq(_, _) => {
+                todo!("X0 -> X1")
+            }
+            XInstruction::Set(_, _) => {
+                todo!("X0 -> X1")
+            }
+            XInstruction::Movzbq(_, _) => {
+                todo!("X0 -> X1")
+            }
+            XInstruction::JmpIf(_, _) => {
+                todo!("X0 -> X1")
+            }
         }
     }
 }
@@ -219,6 +255,21 @@ impl XInterpMut for XInstruction {
             XInstruction::Jmp(l) => l.interp_(env),
             XInstruction::Pushq(src) => push(src, env),
             XInstruction::Popq(dst) => pop(dst, env),
+            XInstruction::Xorq(_, _) => {
+                todo!("X0 -> X1")
+            }
+            XInstruction::Cmpq(_, _) => {
+                todo!("X0 -> X1")
+            }
+            XInstruction::Set(_, _) => {
+                todo!("X0 -> X1")
+            }
+            XInstruction::Movzbq(_, _) => {
+                todo!("X0 -> X1")
+            }
+            XInstruction::JmpIf(_, _) => {
+                todo!("X0 -> X1")
+            }
         }
     }
 
@@ -284,6 +335,9 @@ fn set(dst: &XArgument, val: &Number, env: &XEnv) -> XEnv {
             env_c.variable.insert(var.into(), *val);
             env_c
         }
+        XArgument::XBReg(_) => {
+            todo!("X0 -> X1")
+        }
     }
 }
 
@@ -298,6 +352,9 @@ fn value(arg: &XArgument, env: &XEnv) -> Number {
         }
         XArgument::XVar(var) => {
             *env.variable.get(var).unwrap_or(&0) as Number // Default variables to 0
+        }
+        XArgument::XBReg(_) => {
+            todo!("X0 -> X1")
         }
     }
 }
