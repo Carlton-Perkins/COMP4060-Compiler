@@ -116,7 +116,7 @@ pub enum XInstruction {
     Cmpq(XArgument, XArgument),
     Set(CMP, XArgument),
     Movzbq(XArgument, XArgument),
-    JmpIf(CMP, XArgument),
+    JmpIf(CMP, Label),
 }
 
 impl ToByteReg for XRegister {
@@ -444,10 +444,7 @@ mod test_xprog {
             XInstruction::Set(CMP::EQ, XArgument::XBReg(XRegister::RAX)).emit(),
             "sete %AL"
         );
-        assert_eq!(
-            XInstruction::JmpIf(CMP::EQ, XArgument::XBReg(XRegister::RAX)).emit(),
-            "je %AL"
-        );
+        assert_eq!(XInstruction::JmpIf(CMP::EQ, Label!("foo")).emit(), "je foo");
     }
 
     fn get_test_progs() -> Vec<(XProgram, Answer)> {
@@ -498,6 +495,68 @@ mod test_xprog {
                 .into_iter()
                 .collect::<HashMap<_, _>>(),
                 S64(6),
+            ),
+            (
+                XProgram!(XBlock!(
+                    "main",
+                    Movq(XCon(1), XReg(RAX)),
+                    Movq(XCon(1), XReg(RBX)),
+                    Xorq(XReg(RAX), XReg(RBX)),
+                    Retq
+                )),
+                Bool(false),
+            ),
+            (
+                XProgram!(XBlock!(
+                    "main",
+                    Movq(XCon(1), XReg(RAX)),
+                    Movq(XCon(5), XReg(RBX)),
+                    Cmpq(XReg(RAX), XReg(RBX)),
+                    Set(CMP::EQ, XReg(RAX)),
+                    Retq
+                )),
+                Bool(false),
+            ),
+            (
+                XProgram!(XBlock!(
+                    "main",
+                    Movq(XCon(1), XReg(RAX)),
+                    Movq(XCon(1), XReg(RBX)),
+                    Cmpq(XReg(RAX), XReg(RBX)),
+                    Set(CMP::EQ, XReg(RAX)),
+                    Retq
+                )),
+                Bool(true),
+            ),
+            (
+                XProgram!(
+                    XBlock!(
+                        "main",
+                        Movq(XCon(1), XReg(RAX)),
+                        Movq(XCon(1), XReg(RBX)),
+                        Cmpq(XReg(RAX), XReg(RBX)),
+                        JmpIf(CMP::EQ, Label!("tbranch")),
+                        Movq(XCon(42), XReg(RAX)),
+                        Retq
+                    ),
+                    XBlock!("tbranch", Movq(XCon(24), XReg(RAX)), Retq)
+                ),
+                S64(24),
+            ),
+            (
+                XProgram!(
+                    XBlock!(
+                        "main",
+                        Movq(XCon(2), XReg(RAX)),
+                        Movq(XCon(1), XReg(RBX)),
+                        Cmpq(XReg(RAX), XReg(RBX)),
+                        JmpIf(CMP::EQ, Label!("tbranch")),
+                        Movq(XCon(42), XReg(RAX)),
+                        Retq
+                    ),
+                    XBlock!("tbranch", Movq(XCon(24), XReg(RAX)), Retq)
+                ),
+                S64(42),
             ),
         ];
 
