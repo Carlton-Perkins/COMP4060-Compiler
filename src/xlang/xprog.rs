@@ -18,6 +18,10 @@ pub trait XInterpMut {
     fn interp_(&self, env: &mut Self::Env) -> Self::Output;
 }
 
+trait ToByteReg {
+    fn to_byte_register(&self) -> XByteRegister;
+}
+
 #[derive(Clone)]
 pub struct XEnv {
     register: HashMap<XRegister, Number>,
@@ -46,6 +50,26 @@ pub enum XRegister {
     R13,
     R14,
     R15,
+}
+
+#[derive(Debug, strum_macros::ToString, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord)]
+pub enum XByteRegister {
+    AL,
+    BL,
+    CL,
+    DL,
+    SIL,
+    DIL,
+    BPL,
+    SPL,
+    R8B,
+    R9B,
+    R10B,
+    R11B,
+    R12B,
+    R13B,
+    R14B,
+    R15B,
 }
 mod reglist {
     use super::{XRegister, XRegister::*};
@@ -95,6 +119,30 @@ pub enum XInstruction {
     JmpIf(CMP, XArgument),
 }
 
+impl ToByteReg for XRegister {
+    fn to_byte_register(&self) -> XByteRegister {
+        use {XByteRegister::*, XRegister::*};
+        match self {
+            RAX => AL,
+            RBX => BL,
+            RCX => CL,
+            RDX => DL,
+            RSI => SIL,
+            RDI => DIL,
+            RBP => BPL,
+            RSP => SPL,
+            R8 => R8B,
+            R9 => R9B,
+            R10 => R10B,
+            R11 => R11B,
+            R12 => R12B,
+            R13 => R13B,
+            R14 => R14B,
+            R15 => R15B,
+        }
+    }
+}
+
 impl XEnv {
     pub fn new(prog: &XProgram) -> Self {
         XEnv {
@@ -127,6 +175,12 @@ impl Emit for XRegister {
     }
 }
 
+impl Emit for XByteRegister {
+    fn emit(&self) -> String {
+        format!("%{}", self.to_string())
+    }
+}
+
 impl Emit for Label {
     fn emit(&self) -> String {
         self.to_string()
@@ -143,9 +197,7 @@ impl Emit for XArgument {
                 n => format!("{}({})", n, r.emit()),
             },
             XArgument::XVar(v) => format!("!{}!", v),
-            XArgument::XBReg(_) => {
-                todo!("X0 -> X1")
-            }
+            XArgument::XBReg(br) => br.to_byte_register().emit(),
         }
     }
 }
@@ -169,21 +221,11 @@ impl Emit for XInstruction {
             XInstruction::Jmp(dst) => unary("jmp", dst),
             XInstruction::Pushq(src) => unary("pushq", src),
             XInstruction::Popq(dst) => unary("popq", dst),
-            XInstruction::Xorq(_, _) => {
-                todo!("X0 -> X1")
-            }
-            XInstruction::Cmpq(_, _) => {
-                todo!("X0 -> X1")
-            }
-            XInstruction::Set(_, _) => {
-                todo!("X0 -> X1")
-            }
-            XInstruction::Movzbq(_, _) => {
-                todo!("X0 -> X1")
-            }
-            XInstruction::JmpIf(_, _) => {
-                todo!("X0 -> X1")
-            }
+            XInstruction::Xorq(src, dst) => binary("xorq", src, dst),
+            XInstruction::Cmpq(src, dst) => binary("cmpq", src, dst),
+            XInstruction::Set(cmp, dst) => unary(&(String::from("set") + &cmp.emit()), dst),
+            XInstruction::Movzbq(src, dst) => binary("movzbq", src, dst),
+            XInstruction::JmpIf(cmp, lab) => unary(&(String::from("j") + &cmp.emit()), lab),
         }
     }
 }
@@ -397,6 +439,15 @@ mod test_xprog {
         assert_eq!(XArgument::XReg(XRegister::RAX).emit(), "%RAX");
         assert_eq!(XArgument::XDeref(XRegister::RAX, 5).emit(), "5(%RAX)");
         assert_eq!(XArgument::XDeref(XRegister::RAX, 0).emit(), "(%RAX)");
+        assert_eq!(XArgument::XBReg(XRegister::RAX).emit(), "%AL");
+        assert_eq!(
+            XInstruction::Set(CMP::EQ, XArgument::XBReg(XRegister::RAX)).emit(),
+            "sete %AL"
+        );
+        assert_eq!(
+            XInstruction::JmpIf(CMP::EQ, XArgument::XBReg(XRegister::RAX)).emit(),
+            "je %AL"
+        );
     }
 
     fn get_test_progs() -> Vec<(XProgram, Answer)> {
