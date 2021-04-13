@@ -2,6 +2,7 @@ use crate::common::{
     traits::Emit,
     types::{Address, Answer, Answer::*, Label, Number, Variable, CMP},
 };
+use itertools::Itertools;
 use std::collections::HashMap;
 use strum_macros;
 
@@ -27,9 +28,19 @@ pub struct XEnv {
     register: HashMap<XRegister, Number>,
     variable: HashMap<Variable, Number>,
     memory: HashMap<Address, Number>,
-    block: XProgram,
+    program: XProgram,
+    current_block: XBlock,
     readc: usize,
     printed: Vec<Number>,
+    cmp: XCMPEnv,
+}
+#[derive(Clone, Copy)]
+struct XCMPEnv {
+    eq: bool,
+    lt: bool,
+    leq: bool,
+    geq: bool,
+    gt: bool,
 }
 
 #[derive(Debug, strum_macros::ToString, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord)]
@@ -143,15 +154,67 @@ impl ToByteReg for XRegister {
     }
 }
 
+impl ToByteReg for XArgument {
+    fn to_byte_register(&self) -> XByteRegister {
+        match self {
+            XArgument::XCon(_) => {
+                panic!("Impossible conversion self -> ByteRegister")
+            }
+            XArgument::XReg(r) => r.to_byte_register(),
+            XArgument::XBReg(br) => br.to_byte_register(),
+            XArgument::XDeref(_, _) => {
+                panic!("Impossible conversion self -> ByteRegister")
+            }
+            XArgument::XVar(_) => {
+                panic!("Impossible conversion self -> ByteRegister")
+            }
+        }
+    }
+}
+
 impl XEnv {
     pub fn new(prog: &XProgram) -> Self {
         XEnv {
             register: HashMap::new(),
             variable: HashMap::new(),
             memory: HashMap::new(),
-            block: prog.clone(),
+            program: prog.clone(),
+            current_block: vec![],
             readc: 0,
             printed: Vec::new(),
+            cmp: XCMPEnv::new(),
+        }
+    }
+}
+
+impl XCMPEnv {
+    fn new() -> Self {
+        XCMPEnv {
+            eq: false,
+            lt: false,
+            leq: false,
+            geq: false,
+            gt: false,
+        }
+    }
+
+    fn get(&self, cmp: &CMP) -> bool {
+        match cmp {
+            CMP::EQ => self.eq,
+            CMP::LT => self.lt,
+            CMP::LEQ => self.leq,
+            CMP::GEQ => self.geq,
+            CMP::GT => self.gt,
+        }
+    }
+
+    fn do_cmp(lh: &Number, rh: &Number) -> XCMPEnv {
+        XCMPEnv {
+            eq: lh == rh,
+            lt: lh < rh,
+            leq: lh <= rh,
+            geq: lh >= rh,
+            gt: lh > rh,
         }
     }
 }
@@ -223,7 +286,10 @@ impl Emit for XInstruction {
             XInstruction::Popq(dst) => unary("popq", dst),
             XInstruction::Xorq(src, dst) => binary("xorq", src, dst),
             XInstruction::Cmpq(src, dst) => binary("cmpq", src, dst),
-            XInstruction::Set(cmp, dst) => unary(&(String::from("set") + &cmp.emit()), dst),
+            XInstruction::Set(cmp, dst) => unary(
+                &(String::from("set") + &cmp.emit()),
+                &dst.to_byte_register(),
+            ),
             XInstruction::Movzbq(src, dst) => binary("movzbq", src, dst),
             XInstruction::JmpIf(cmp, lab) => unary(&(String::from("j") + &cmp.emit()), lab),
         }
@@ -255,7 +321,7 @@ impl XInterpMut for Label {
     type Output = XEnv;
 
     fn interp_(&self, env: &mut Self::Env) -> Self::Output {
-        let get = env.block.get(self).clone();
+        let get = env.program.get(self).clone();
         match get {
             Some(blk) => blk.clone().interp_(env),
             None => match self.as_str() {
@@ -287,6 +353,7 @@ impl XInterpMut for XInstruction {
     type Output = XEnv;
 
     fn interp_(&self, env: &mut Self::Env) -> Self::Output {
+        println!("Running: {:?}", self);
         match self {
             XInstruction::Addq(src, dst) => set(dst, &(value(src, env) + value(dst, env)), env),
             XInstruction::Subq(src, dst) => set(dst, &(value(src, env) - value(dst, env)), env),
@@ -297,20 +364,23 @@ impl XInterpMut for XInstruction {
             XInstruction::Jmp(l) => l.interp_(env),
             XInstruction::Pushq(src) => push(src, env),
             XInstruction::Popq(dst) => pop(dst, env),
-            XInstruction::Xorq(_, _) => {
-                todo!("X0 -> X1")
+            XInstruction::Xorq(src, dst) => set(dst, &(value(dst, env) ^ value(src, env)), env),
+            XInstruction::Cmpq(lh, rh) => {
+                let mut new_env = env.clone();
+                new_env.cmp = XCMPEnv::do_cmp(&value(lh, env), &value(rh, env));
+                new_env
             }
-            XInstruction::Cmpq(_, _) => {
-                todo!("X0 -> X1")
+            XInstruction::Set(cmp, dst) => {
+                let c = if env.cmp.get(cmp) { 1 } else { 0 };
+                set(dst, &c, env)
             }
-            XInstruction::Set(_, _) => {
-                todo!("X0 -> X1")
-            }
-            XInstruction::Movzbq(_, _) => {
-                todo!("X0 -> X1")
-            }
-            XInstruction::JmpIf(_, _) => {
-                todo!("X0 -> X1")
+            XInstruction::Movzbq(src, dst) => set(dst, &(value(src, env) & 0xFF), env),
+            XInstruction::JmpIf(cmp, lab) => {
+                if env.cmp.get(cmp) {
+                    lab.interp_(env)
+                } else {
+                    env.clone()
+                }
             }
         }
     }
@@ -325,13 +395,16 @@ impl XInterpMut for XBlock {
     type Output = XEnv;
 
     fn interp_(&self, mut env: &mut Self::Env) -> Self::Output {
-        match self.split_first() {
-            Some((first, rest)) => rest
-                .into_iter()
-                .map(|x| x.clone())
-                .collect::<XBlock>()
-                .interp_(&mut first.interp_(&mut env)),
-            None => env.clone(),
+        let mut new_env = env.clone();
+        new_env.current_block = self.clone();
+        loop {
+            match new_env.clone().current_block.split_first() {
+                Some((first, rest)) => {
+                    new_env.current_block = rest.to_vec();
+                    new_env = first.interp_(&mut new_env);
+                }
+                None => return new_env.clone(),
+            }
         }
     }
 
@@ -377,8 +450,10 @@ fn set(dst: &XArgument, val: &Number, env: &XEnv) -> XEnv {
             env_c.variable.insert(var.into(), *val);
             env_c
         }
-        XArgument::XBReg(_) => {
-            todo!("X0 -> X1")
+        XArgument::XBReg(r) => {
+            let mut env_c = env.clone();
+            env_c.register.insert(*r, val & 0xFF);
+            env_c
         }
     }
 }
@@ -395,9 +470,7 @@ fn value(arg: &XArgument, env: &XEnv) -> Number {
         XArgument::XVar(var) => {
             *env.variable.get(var).unwrap_or(&0) as Number // Default variables to 0
         }
-        XArgument::XBReg(_) => {
-            todo!("X0 -> X1")
-        }
+        XArgument::XBReg(r) => *env.register.get(r).unwrap_or(&0) & 0xFF,
     }
 }
 
@@ -501,10 +574,10 @@ mod test_xprog {
                     "main",
                     Movq(XCon(1), XReg(RAX)),
                     Movq(XCon(1), XReg(RBX)),
-                    Xorq(XReg(RAX), XReg(RBX)),
+                    Xorq(XReg(RBX), XReg(RAX)),
                     Retq
                 )),
-                Bool(false),
+                S64(0),
             ),
             (
                 XProgram!(XBlock!(
@@ -515,7 +588,8 @@ mod test_xprog {
                     Set(CMP::EQ, XReg(RAX)),
                     Retq
                 )),
-                Bool(false),
+                // Bool(false), TODO Should really contain type info
+                S64(0),
             ),
             (
                 XProgram!(XBlock!(
@@ -526,7 +600,8 @@ mod test_xprog {
                     Set(CMP::EQ, XReg(RAX)),
                     Retq
                 )),
-                Bool(true),
+                // Bool(true), TODO Should really contain type info
+                S64(1),
             ),
             (
                 XProgram!(
@@ -536,10 +611,19 @@ mod test_xprog {
                         Movq(XCon(1), XReg(RBX)),
                         Cmpq(XReg(RAX), XReg(RBX)),
                         JmpIf(CMP::EQ, Label!("tbranch")),
-                        Movq(XCon(42), XReg(RAX)),
-                        Retq
+                        Jmp(Label!("fbranch"))
                     ),
-                    XBlock!("tbranch", Movq(XCon(24), XReg(RAX)), Retq)
+                    XBlock!(
+                        "tbranch",
+                        Movq(XCon(24), XReg(RAX)),
+                        Jmp(Label!("endbranch"))
+                    ),
+                    XBlock!(
+                        "fbranch",
+                        Movq(XCon(42), XReg(RAX)),
+                        Jmp(Label!("endbranch"))
+                    ),
+                    XBlock!("endbranch", Retq)
                 ),
                 S64(24),
             ),
@@ -551,12 +635,59 @@ mod test_xprog {
                         Movq(XCon(1), XReg(RBX)),
                         Cmpq(XReg(RAX), XReg(RBX)),
                         JmpIf(CMP::EQ, Label!("tbranch")),
-                        Movq(XCon(42), XReg(RAX)),
-                        Retq
+                        Jmp(Label!("fbranch"))
                     ),
-                    XBlock!("tbranch", Movq(XCon(24), XReg(RAX)), Retq)
+                    XBlock!(
+                        "tbranch",
+                        Movq(XCon(24), XReg(RAX)),
+                        Jmp(Label!("endbranch"))
+                    ),
+                    XBlock!(
+                        "fbranch",
+                        Movq(XCon(42), XReg(RAX)),
+                        Jmp(Label!("endbranch"))
+                    ),
+                    XBlock!("endbranch", Retq)
                 ),
                 S64(42),
+            ),
+            (
+                XProgram!(
+                    XBlock!(
+                        "main",
+                        Movq(XCon(2), XReg(RAX)),
+                        Movq(XCon(1), XReg(RBX)),
+                        Jmp(Label!("fbranch"))
+                    ),
+                    XBlock!("tbranch", Callq(Label!("foo")), Jmp(Label!("endbranch"))),
+                    XBlock!(
+                        "fbranch",
+                        Movq(XCon(42), XReg(RAX)),
+                        Jmp(Label!("endbranch"))
+                    ),
+                    XBlock!("foo", Movq(XCon(4444), XReg(RAX)), Retq),
+                    XBlock!("endbranch", Retq)
+                ),
+                S64(42),
+            ),
+            (
+                XProgram!(
+                    XBlock!(
+                        "main",
+                        Movq(XCon(2), XReg(RAX)),
+                        Movq(XCon(1), XReg(RBX)),
+                        Jmp(Label!("tbranch"))
+                    ),
+                    XBlock!("tbranch", Callq(Label!("foo")), Jmp(Label!("endbranch"))),
+                    XBlock!(
+                        "fbranch",
+                        Movq(XCon(42), XReg(RAX)),
+                        Jmp(Label!("endbranch"))
+                    ),
+                    XBlock!("foo", Movq(XCon(4444), XReg(RAX)), Retq),
+                    XBlock!("endbranch", Retq)
+                ),
+                S64(4444),
             ),
         ];
 
