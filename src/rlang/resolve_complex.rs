@@ -1,4 +1,4 @@
-use super::RExpr::*;
+use super::{RExpr::*, CMP};
 use crate::{
     common::types::Variable,
     rlang::{RExpr, RProgram},
@@ -7,15 +7,16 @@ use std::collections::HashMap;
 
 type ProgramSeq = Vec<(Variable, RExpr)>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RCEnv {
     lifts: ProgramSeq,
     renames: HashMap<Variable, RExpr>,
+    variable_counter: usize,
 }
 
 pub trait ResolveComplex {
     fn resolve_complex(&self) -> Self;
-    fn resolve_complex_(&self, env: &mut RCEnv) -> Self;
+    fn resolve_complex_(&self, is_tail: bool, env: &mut RCEnv) -> Self;
 }
 
 impl RCEnv {
@@ -23,6 +24,7 @@ impl RCEnv {
         RCEnv {
             lifts: ProgramSeq::new(),
             renames: HashMap::new(),
+            variable_counter: 0,
         }
     }
 }
@@ -30,33 +32,27 @@ impl RCEnv {
 impl ResolveComplex for RProgram {
     fn resolve_complex(&self) -> Self {
         let mut env = RCEnv::new();
-        let expr = self.resolve_complex_(&mut env);
-
-        match env.lifts.len() {
-            0 => expr,
-            _ => recompose_lifts(&env.lifts),
-        }
+        resolve_expr(self, true, &mut env)
     }
 
-    fn resolve_complex_(&self, mut env: &mut RCEnv) -> Self {
+    fn resolve_complex_(&self, is_tail: bool, mut env: &mut RCEnv) -> Self {
         match self {
             RNum(_) => self.clone(),
             RRead => lift(self, &mut env),
             RNegate(ex) => {
-                let ex_rco = ex.resolve_complex_(&mut env);
+                let ex_rco = ex.resolve_complex_(false, &mut env);
                 lift(&RNegate(Box::new(ex_rco)), &mut env)
             }
             RAdd(lh, rh) => {
-                let lh_rco = lh.resolve_complex_(&mut env);
-                let rh_rco = rh.resolve_complex_(&mut env);
+                let lh_rco = lh.resolve_complex_(false, &mut env);
+                let rh_rco = rh.resolve_complex_(false, &mut env);
 
                 lift(&RAdd(Box::new(lh_rco), Box::new(rh_rco)), &mut env)
             }
             RLet(v, ve, be) => {
-                let ve_rco = ve.resolve_complex_(&mut env);
+                let ve_rco = ve.resolve_complex_(false, &mut env);
                 env.renames.insert(v.clone(), ve_rco);
-                let br_rco = be.resolve_complex_(&mut env);
-
+                let br_rco = be.resolve_complex_(is_tail, &mut env);
                 lift(&br_rco, &mut env)
             }
             RVar(v) => env
@@ -64,17 +60,43 @@ impl ResolveComplex for RProgram {
                 .get(v)
                 .expect(format!("RCO: Unbound var {:?}", v).as_str())
                 .clone(),
-            RBool(_b) => {
-                todo!("R1 -> R2")
+            RBool(_) => self.clone(),
+            RCmp(cmp, lh, rh) => {
+                let lh_rco = lh.resolve_complex_(false, &mut env);
+                let rh_rco = rh.resolve_complex_(false, &mut env);
+
+                lift(&RCmp(*cmp, Box::new(lh_rco), Box::new(rh_rco)), &mut env)
             }
-            RCmp(_, _, _) => {
-                todo!("R1 -> R2")
+            RIf(cond, tb, fb) => {
+                let mut tb_env = RCEnv {
+                    lifts: vec![],
+                    renames: HashMap::new(),
+                    variable_counter: env.variable_counter,
+                };
+                let tb_rco = resolve_expr(tb, is_tail, &mut tb_env);
+                let mut fb_env = RCEnv {
+                    lifts: vec![],
+                    renames: HashMap::new(),
+                    variable_counter: tb_env.variable_counter,
+                };
+                let fb_rco = resolve_expr(fb, is_tail, &mut fb_env);
+                println!("tb env {:?}", tb_env);
+                println!("fb env {:?}", fb_env);
+                env.variable_counter = fb_env.variable_counter;
+                let (cmp, c_lh, c_rh) = resolve_cmp(cond, &mut env);
+                let if_ex = RIf(
+                    Box::new(RCmp(cmp, Box::new(c_lh), Box::new(c_rh))),
+                    Box::new(tb_rco),
+                    Box::new(fb_rco),
+                );
+                match is_tail {
+                    true => if_ex,
+                    false => lift(&if_ex, &mut env),
+                }
             }
-            RIf(_, _, _) => {
-                todo!("R1 -> R2")
-            }
-            RNot(_) => {
-                todo!("R1 -> R2")
+            RNot(ex) => {
+                let ex_rco = ex.resolve_complex_(false, &mut env);
+                lift(&RNot(Box::new(ex_rco)), &mut env)
             }
         }
     }
@@ -104,9 +126,39 @@ fn recompose_lifts(seq: &ProgramSeq) -> RExpr {
 }
 
 fn lift(expr: &RExpr, env: &mut RCEnv) -> RExpr {
-    let nv: Variable = format!("r{}", env.lifts.len());
+    let nv: Variable = format!("r{}", env.variable_counter);
     env.lifts.push((nv.clone(), expr.clone()));
+    env.variable_counter += 1;
     RVar(nv)
+}
+
+fn resolve_cmp(c: &RExpr, mut env: &mut RCEnv) -> (CMP, RExpr, RExpr) {
+    match c {
+        RCmp(cmp, lh, rh) => (
+            *cmp,
+            lh.resolve_complex_(false, env),
+            rh.resolve_complex_(false, env),
+        ),
+        RLet(v, ve, be) => {
+            let ve_rco = ve.resolve_complex_(false, &mut env);
+            env.renames.insert(v.clone(), ve_rco);
+            resolve_cmp(be, env)
+        }
+        a => (
+            CMP::EQ,
+            RBool(true),
+            lift(&a.resolve_complex_(false, env), env),
+        ),
+    }
+}
+
+fn resolve_expr(e: &RExpr, is_tail: bool, mut env: &mut RCEnv) -> RExpr {
+    let expr = e.resolve_complex_(is_tail, &mut env);
+
+    match env.lifts.len() {
+        0 => expr,
+        _ => recompose_lifts(&env.lifts),
+    }
 }
 
 #[cfg(test)]
@@ -216,6 +268,71 @@ mod test_rco {
                     )
                 ),
                 S64(5),
+            ),
+            (RBool(true), RBool(true), Bool(true)),
+            (
+                REQ!(RNum(5), RAdd!(RNum(5), RNum(4))),
+                RLet!(
+                    "r0",
+                    RAdd!(RNum(5), RNum(4)),
+                    RLet!("r1", REQ!(RNum(5), RVar!("r0")), RVar!("r1"))
+                ),
+                Bool(false),
+            ),
+            (
+                REQ!(RNum(9), RAdd!(RNum(5), RNum(4))),
+                RLet!(
+                    "r0",
+                    RAdd!(RNum(5), RNum(4)),
+                    RLet!("r1", REQ!(RNum(9), RVar!("r0")), RVar!("r1"))
+                ),
+                Bool(true),
+            ),
+            (
+                RAdd!(
+                    RIf!(
+                        RLT!(RRead, RNum(5)),
+                        RNum(17),
+                        RAdd!(RNum(8), RAdd!(RNum(9), RNum(10)))
+                    ),
+                    RAdd!(RRead, RNum(21))
+                ),
+                RLet!(
+                    "r2",
+                    RRead,
+                    RLet!(
+                        "r3",
+                        RIf!(
+                            RLT!(RVar!("r2"), RNum(5)),
+                            RNum(17),
+                            RLet!(
+                                "r0",
+                                RAdd!(RNum(9), RNum(10)),
+                                RLet!("r1", RAdd!(RNum(8), RVar!("r0")), RVar!("r1"))
+                            )
+                        ),
+                        RLet!(
+                            "r4",
+                            RRead,
+                            RLet!(
+                                "r5",
+                                RAdd!(RVar!("r4"), RNum(21)),
+                                RLet!("r6", RAdd!(RVar!("r3"), RVar!("r5")), RVar!("r6"))
+                            )
+                        )
+                    )
+                ),
+                S64(39),
+            ),
+            (
+                RIf!(REQ!(RNum(5), RNum(5)), RNum(42), RNum(24)),
+                RIf!(REQ!(RNum(5), RNum(5)), RNum(42), RNum(24)),
+                S64(42),
+            ),
+            (
+                RIf!(REQ!(RNum(4), RNum(5)), RNum(42), RNum(24)),
+                RIf!(REQ!(RNum(4), RNum(5)), RNum(42), RNum(24)),
+                S64(24),
             ),
         ];
 

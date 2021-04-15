@@ -278,7 +278,7 @@ impl Emit for XInstruction {
             XInstruction::Addq(src, dst) => binary("addq", src, dst),
             XInstruction::Subq(src, dst) => binary("subq", src, dst),
             XInstruction::Movq(src, dst) => binary("movq", src, dst),
-            XInstruction::Retq => "ret".to_string(),
+            XInstruction::Retq => "retq".to_string(),
             XInstruction::Negq(n) => unary("negq", n),
             XInstruction::Callq(dst) => unary("callq", dst),
             XInstruction::Jmp(dst) => unary("jmp", dst),
@@ -684,10 +684,10 @@ mod test_xprog {
                         Movq(XCon(42), XReg(RAX)),
                         Jmp(Label!("endbranch"))
                     ),
-                    XBlock!("foo", Movq(XCon(4444), XReg(RAX)), Retq),
+                    XBlock!("foo", Movq(XCon(44), XReg(RAX)), Retq),
                     XBlock!("endbranch", Retq)
                 ),
-                S64(4444),
+                S64(44),
             ),
         ];
 
